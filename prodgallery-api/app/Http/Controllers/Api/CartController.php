@@ -1,0 +1,73 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\Cart;
+use App\Models\Photo;
+use Illuminate\Http\Request;
+
+class CartController extends Controller
+{
+    public function index(Request $request)
+    {
+        $cart = Cart::with('photo.category')
+            ->where('user_id', $request->user()->id)
+            ->get();
+
+        return response()->json($cart);
+    }
+
+    public function add(Request $request)
+    {
+        $request->validate([
+            'photo_id' => 'required|exists:photos,id',
+            'quantity' => 'required|integer|min:1',
+        ]);
+
+        $cartItem = Cart::where('user_id', $request->user()->id)
+            ->where('photo_id', $request->photo_id)
+            ->first();
+
+        if ($cartItem) {
+            $cartItem->increment('quantity', $request->quantity);
+            return response()->json($cartItem);
+        }
+
+        $cart = Cart::create([
+            'user_id' => $request->user()->id,
+            'photo_id' => $request->photo_id,
+            'quantity' => $request->quantity,
+        ]);
+
+        return response()->json($cart, 201);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $request->validate([
+            'quantity' => 'required|integer|min:1',
+        ]);
+
+        $cart = Cart::findOrFail($id);
+        $this->authorize('update', $cart);
+
+        $cart->update(['quantity' => $request->quantity]);
+        return response()->json($cart);
+    }
+
+    public function remove($id)
+    {
+        $cart = Cart::findOrFail($id);
+        $this->authorize('delete', $cart);
+        $cart->delete();
+
+        return response()->json(['message' => 'Item removed from cart']);
+    }
+
+    public function clear(Request $request)
+    {
+        Cart::where('user_id', $request->user()->id)->delete();
+        return response()->json(['message' => 'Cart cleared']);
+    }
+}

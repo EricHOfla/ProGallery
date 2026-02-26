@@ -1,0 +1,35 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run Laravel API",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-Command",
+				"cd prodgallery-api; php artisan serve"
+			],
+			"isBackground": true
+		},
+		{
+			"label": "Run Vite Frontend",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-Command",
+				"cd ProdGallery; npm run dev"
+			],
+			"isBackground": true
+		},
+		{
+			"label": "Run Laravel API (diagnose)",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-Command",
+				"cd prodgallery-api; php artisan serve"
+			],
+			"isBackground": true
+		}
+	]
+}

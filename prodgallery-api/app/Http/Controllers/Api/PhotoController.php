@@ -1,0 +1,63 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\Photo;
+use Illuminate\Http\Request;
+
+class PhotoController extends Controller
+{
+    public function index(Request $request)
+    {
+        $query = Photo::with('category')->where('is_active', true);
+
+        // Search by title or description
+        if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        // Filter by category
+        if ($request->has('category')) {
+            $query->whereHas('category', function($q) use ($request) {
+                $q->where('slug', $request->category);
+            });
+        }
+
+        // Filter by featured
+        if ($request->has('featured')) {
+            $query->where('featured', true);
+        }
+
+        // Filter by price range
+        if ($request->has('min_price')) {
+            $query->where('price', '>=', $request->min_price);
+        }
+        if ($request->has('max_price')) {
+            $query->where('price', '<=', $request->max_price);
+        }
+
+        // Sorting
+        $sortBy = $request->get('sort_by', 'created_at');
+        $sortOrder = $request->get('sort_order', 'desc');
+        $allowedSorts = ['created_at', 'price', 'title'];
+        
+        if (in_array($sortBy, $allowedSorts)) {
+            $query->orderBy($sortBy, $sortOrder);
+        }
+
+        $photos = $query->paginate(12);
+
+        return response()->json($photos);
+    }
+
+    public function show($id)
+    {
+        $photo = Photo::with('category')->findOrFail($id);
+        return response()->json($photo);
+    }
+}
