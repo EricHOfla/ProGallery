@@ -60,7 +60,7 @@ export default function Cart() {
                 <div className="grow flex-1">
                   <h3 className="text-lg font-semibold mb-2">{photo.title}</h3>
                   <p className="text-gray-600 text-sm mb-2">{photo.category?.name || photo.category}</p>
-                  <p className="text-emerald-600 font-bold">${photo.price}</p>
+                  <p className="text-logo-blue font-bold">${photo.price}</p>
                 </div>
 
                 {/* Quantity & Remove */}
@@ -125,7 +125,7 @@ export default function Cart() {
             <div className="border-t pt-4 mb-6">
               <div className="flex justify-between">
                 <span className="font-bold text-lg">Total</span>
-                <span className="font-bold text-lg text-emerald-600">
+                <span className="font-bold text-lg text-logo-blue">
                   ${(getTotalPrice() * 1.1).toFixed(2)}
                 </span>
               </div>

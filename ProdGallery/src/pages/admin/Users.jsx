@@ -138,7 +138,7 @@ export default function AdminUsers() {
           </div>
           <button
             onClick={() => openModal()}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+            className="px-4 py-2 bg-logo-blue text-white rounded-lg hover:bg-logo-blue/90 transition-colors"
           >
             Add New User
           </button>
@@ -180,7 +180,7 @@ export default function AdminUsers() {
                   <tr key={user.id}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="w-10 h-10 bg-emerald-600 text-white rounded-full flex items-center justify-center font-semibold">
+                        <div className="w-10 h-10 bg-logo-blue text-white rounded-full flex items-center justify-center font-semibold">
                           {user.first_name?.[0]}{user.last_name?.[0]}
                         </div>
                         <div className="ml-4">
@@ -197,7 +197,7 @@ export default function AdminUsers() {
                       <select
                         value={user.role}
                         onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                        className={`px-3 py-1 rounded-full text-xs font-semibold border-0 focus:ring-2 focus:ring-emerald-500 ${
+                        className={`px-3 py-1 rounded-full text-xs font-semibold border-0 focus:ring-2 focus:ring-logo-blue ${
                           user.role === 'admin'
                             ? 'bg-purple-100 text-purple-800'
                             : 'bg-green-100 text-green-800'
@@ -216,7 +216,7 @@ export default function AdminUsers() {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
                         onClick={() => openModal(user)}
-                        className="text-emerald-600 hover:text-emerald-900 mr-4"
+                        className="text-logo-blue hover:text-logo-blue/80 mr-4"
                       >
                         Edit
                       </button>
@@ -268,7 +268,7 @@ export default function AdminUsers() {
                     required
                     value={formData.first_name}
                     onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-logo-blue focus:border-transparent"
                   />
                 </div>
 
@@ -281,7 +281,7 @@ export default function AdminUsers() {
                     required
                     value={formData.last_name}
                     onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-logo-blue focus:border-transparent"
                   />
                 </div>
 
@@ -294,7 +294,7 @@ export default function AdminUsers() {
                     required
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-logo-blue focus:border-transparent"
                   />
                 </div>
 
@@ -307,7 +307,7 @@ export default function AdminUsers() {
                     required={!editingUser}
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-logo-blue focus:border-transparent"
                   />
                 </div>
 
@@ -318,7 +318,7 @@ export default function AdminUsers() {
                   <select
                     value={formData.role}
                     onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-logo-blue focus:border-transparent"
                   >
                     <option value="customer">Customer</option>
                     <option value="admin">Admin</option>
@@ -336,7 +336,7 @@ export default function AdminUsers() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+                  className="flex-1 px-4 py-2 bg-logo-blue text-white rounded-lg hover:bg-logo-blue/90"
                 >
                   {editingUser ? 'Update User' : 'Create User'}
                 </button>
