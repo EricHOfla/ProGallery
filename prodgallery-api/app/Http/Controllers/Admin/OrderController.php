@@ -36,8 +36,8 @@ class OrderController extends Controller
             return response()->json(['message' => 'An order cannot be completed before payment is confirmed.'], 422);
         }
 
-        if ($order->payment_status === 'refunded' && $validated['status'] !== 'cancelled') {
-            return response()->json(['message' => 'A refunded order cannot be reopened.'], 422);
+        if (in_array($order->payment_status, ['refunded', 'refund_pending'], true) && $validated['status'] !== 'cancelled') {
+            return response()->json(['message' => 'A refunded or refund-pending order cannot be reopened.'], 422);
         }
 
         $order->update(['status' => $validated['status']]);
