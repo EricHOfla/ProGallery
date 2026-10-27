@@ -9,6 +9,7 @@ import Cart from "../pages/Cart";
 import Checkout from "../pages/Checkout";
 import Orders from "../pages/Orders";
 import OrderDetails from "../pages/OrderDetails";
+import Favorites from "../pages/Favorites";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
 import ChangePassword from "../pages/ChangePassword";
@@ -34,94 +35,45 @@ function AppRoutesContent() {
   const location = useLocation();
   const hideNavFooter = ["/login", "/register", "/forgot-password", "/reset-password"].includes(location.pathname) || location.pathname.startsWith("/admin");
 
-  return (
-    <>
-      {!hideNavFooter && <Navbar />}
-      <main className="min-h-screen">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/gallery" element={<Gallery />} />
-          <Route path="/photo/:id" element={<PhotoDetails />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/services" element={<Services />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route
-            path="/change-password"
-            element={
-              <ProtectedRoute>
-                <ChangePassword />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/cart"
-            element={
-              <ProtectedRoute>
-                <Cart />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/checkout"
-            element={
-              <ProtectedRoute>
-                <Checkout />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/orders"
-            element={
-              <ProtectedRoute>
-                <Orders />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/order/:orderId"
-            element={
-              <ProtectedRoute>
-                <OrderDetails />
-              </ProtectedRoute>
-            }
-          />
-          {/* Admin Routes */}
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute adminOnly={true}>
-                <AdminLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<AdminDashboard />} />
-            <Route path="photos" element={<AdminPhotos />} />
-            <Route path="photos/new" element={<AdminPhotoForm />} />
-            <Route path="photos/edit/:photoId" element={<AdminPhotoEdit />} />
-            <Route path="orders" element={<AdminOrders />} />
-            <Route path="orders/:orderId" element={<AdminOrderDetails />} />
-            <Route path="categories" element={<AdminCategories />} />
-            <Route path="users" element={<AdminUsers />} />
-            <Route path="messages" element={<AdminContactMessages />} />
-            <Route path="analytics" element={<AdminAnalytics />} />
-          </Route>
-          
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </main>
-      {!hideNavFooter && <Footer />}
-    </>
-  );
+  return <>
+    {!hideNavFooter && <Navbar />}
+    <main className="min-h-screen">
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/gallery" element={<Gallery />} />
+        <Route path="/photo/:id" element={<PhotoDetails />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/services" element={<Services />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
+        <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
+        <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
+        <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+        <Route path="/order/:orderId" element={<ProtectedRoute><OrderDetails /></ProtectedRoute>} />
+        <Route path="/favorites" element={<ProtectedRoute><Favorites /></ProtectedRoute>} />
+        <Route path="/admin" element={<ProtectedRoute adminOnly={true}><AdminLayout /></ProtectedRoute>}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="photos" element={<AdminPhotos />} />
+          <Route path="photos/new" element={<AdminPhotoForm />} />
+          <Route path="photos/edit/:photoId" element={<AdminPhotoEdit />} />
+          <Route path="orders" element={<AdminOrders />} />
+          <Route path="orders/:orderId" element={<AdminOrderDetails />} />
+          <Route path="categories" element={<AdminCategories />} />
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="messages" element={<AdminContactMessages />} />
+          <Route path="analytics" element={<AdminAnalytics />} />
+        </Route>
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </main>
+    {!hideNavFooter && <Footer />}
+  </>;
 }
 
 export default function AppRoutes() {
-  return (
-    <BrowserRouter>
-      <AppRoutesContent />
-    </BrowserRouter>
-  );
+  return <BrowserRouter><AppRoutesContent /></BrowserRouter>;
 }
