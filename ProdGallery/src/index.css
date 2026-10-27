@@ -12,6 +12,16 @@
 html {
   min-width: 320px;
   background: #fff;
+  text-size-adjust: 100%;
+  scroll-padding-top: 6rem;
+}
+
+:root {
+  --pg-ink: #0f172a;
+  --pg-muted: #64748b;
+  --pg-border: #e2e8f0;
+  --pg-accent: #047857;
+  --pg-focus: rgba(16, 185, 129, 0.55);
 }
 
 body {
@@ -27,6 +37,49 @@ input,
 select,
 textarea {
   -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a {
+  touch-action: manipulation;
+}
+
+a {
+  text-underline-offset: 0.2em;
+}
+
+:where(input, select, textarea) {
+  max-width: 100%;
+}
+
+:where(button, a, input, select, textarea):disabled {
+  cursor: not-allowed;
+}
+
+:where(button, a, input, select, textarea):focus-visible {
+  outline-color: var(--pg-focus);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: #cbd5e1;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+  background-clip: padding-box;
 }
 
 button,
