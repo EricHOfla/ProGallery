@@ -115,6 +115,14 @@ class OrderController extends Controller
             return response()->json(['message' => 'This order has already been paid.'], 409);
         }
 
+        if (in_array($order->payment_status, ['refunded', 'refund_pending'], true) || $order->status === 'cancelled') {
+            return response()->json(['message' => 'Payment cannot be started for a cancelled or refunded order.'], 409);
+        }
+
+        if ($order->items->isEmpty()) {
+            return response()->json(['message' => 'This order has no items and cannot be paid.'], 422);
+        }
+
         $secret = (string) config('services.stripe.secret');
         if ($secret === '') {
             return response()->json(['message' => 'Online payment is not configured yet. Please contact the store.'], 503);
@@ -138,9 +146,18 @@ class OrderController extends Controller
             $form["line_items[$index][quantity]"] = (string) $item->quantity;
         }
 
-        $response = \Illuminate\Support\Facades\Http::withToken($secret)
-            ->asForm()
-            ->post('https://api.stripe.com/v1/checkout/sessions', $form);
+        try {
+            $response = \Illuminate\Support\Facades\Http::withToken($secret)
+                ->asForm()
+                ->timeout(20)
+                ->post('https://api.stripe.com/v1/checkout/sessions', $form);
+        } catch (\Throwable $exception) {
+            \Illuminate\Support\Facades\Log::warning('Stripe Checkout session request failed', [
+                'order_id' => $order->id,
+                'exception' => $exception->getMessage(),
+            ]);
+            return response()->json(['message' => 'The payment provider could not be reached. Please try again.'], 502);
+        }
 
         if (!$response->successful() || empty($response->json('url')) || empty($response->json('id'))) {
             \Illuminate\Support\Facades\Log::error('Stripe Checkout session creation failed', ['order_id' => $order->id, 'status' => $response->status()]);
