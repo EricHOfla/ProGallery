@@ -17,6 +17,7 @@ export default function PhotoDetails() {
   const [licenseType, setLicenseType] = useState("personal");
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
+  const [favoriteError, setFavoriteError] = useState("");
   const [photo, setPhoto] = useState(null);
   const [relatedPhotos, setRelatedPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -61,10 +62,11 @@ export default function PhotoDetails() {
   const handleFavorite = async () => {
     if (!user) { navigate("/login"); return; }
     setFavoriteLoading(true);
+    setFavoriteError("");
     try {
       if (isFavorite) { await favoritesAPI.remove(photo.id); setIsFavorite(false); }
       else { await favoritesAPI.add(photo.id); setIsFavorite(true); }
-    } catch (favoriteError) { setError(favoriteError.message || "Could not update favorites."); }
+    } catch (favoriteRequestError) { setFavoriteError(favoriteRequestError.message || "Could not update favorites."); }
     finally { setFavoriteLoading(false); }
   };
 
@@ -167,6 +169,7 @@ export default function PhotoDetails() {
             <p className="mt-2 text-xs text-gray-500">Personal 1× · Commercial 2× · Extended 5×. Confirm your actual license terms before selling.</p>
           </div>
           {user && <button type="button" onClick={handleFavorite} disabled={favoriteLoading} className="mb-4 rounded-lg border border-emerald-700 px-4 py-2 font-medium text-emerald-800 disabled:opacity-50">{favoriteLoading ? "Saving..." : isFavorite ? "♥ Remove from Favorites" : "♡ Save to Favorites"}</button>}
+          {favoriteError && <p role="alert" className="mb-4 text-sm text-red-700">{favoriteError}</p>}
 
           <div className="mb-8">
             <h3 className="font-semibold mb-2">Details</h3>
