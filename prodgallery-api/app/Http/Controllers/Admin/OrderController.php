@@ -71,7 +71,10 @@ class OrderController extends Controller
                 ->asForm()
                 ->timeout(20);
 
-            $payload = ['payment_intent' => $order->payment_intent_id];
+            $payload = [
+                'payment_intent' => $order->payment_intent_id,
+                'metadata[order_id]' => (string) $order->id,
+            ];
             if (!empty($validated['reason'])) {
                 $payload['reason'] = $validated['reason'];
             }
