@@ -365,13 +365,20 @@ class OrderController extends Controller
 
                     // Parse the storage URL to get the relative path
                     // URL format: /storage/photos/filename.ext
-                    if (preg_match('#/storage/(.+)$#', $imageUrl, $matches)) {
-                        $relativePath = $matches[1]; // photos/filename.ext
-                        $actualPath = storage_path('app' . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relativePath));
+                    if (preg_match('#(?:^|/)storage/(.+)$#', $imageUrl, $matches)) {
+                        $relativePath = ltrim($matches[1], '/');
+                        $publicStorageRoot = realpath(storage_path('app' . DIRECTORY_SEPARATOR . 'public'));
+                        $candidatePath = storage_path('app' . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relativePath));
+                        $resolvedPath = realpath($candidatePath);
+
+                        // Never allow a stored image path to escape Laravel's public storage directory.
+                        if ($publicStorageRoot && $resolvedPath && str_starts_with($resolvedPath, $publicStorageRoot . DIRECTORY_SEPARATOR)) {
+                            $actualPath = $resolvedPath;
+                        }
                     }
 
                     // Verify the file exists before adding
-                    if ($actualPath && file_exists($actualPath)) {
+                    if ($actualPath && is_file($actualPath) && is_readable($actualPath)) {
                         // Use photo title for filename with extension
                         $ext = pathinfo($actualPath, PATHINFO_EXTENSION);
                         $fileName = preg_replace('/[^a-zA-Z0-9._-]/', '_', $item->photo->title) . '_' . $item->id . '.' . $ext;
@@ -397,7 +404,11 @@ class OrderController extends Controller
             if (file_exists($zipFilePath)) {
                 @unlink($zipFilePath);
             }
-            return response()->json(['message' => 'Failed to create download: ' . $e->getMessage()], 500);
+            Log::error('Order image archive creation failed', [
+                'order_id' => $order->id,
+                'exception' => $e->getMessage(),
+            ]);
+            return response()->json(['message' => 'Failed to prepare the download. Please try again or contact support.'], 500);
         }
     }
 }
