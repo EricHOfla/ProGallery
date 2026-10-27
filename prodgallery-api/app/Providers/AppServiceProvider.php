@@ -39,7 +39,7 @@ class AppServiceProvider extends ServiceProvider
     {
         // Reset links should return customers to the frontend SPA, not the Laravel host.
         ResetPassword::createUrlUsing(function ($user, string $token): string {
-            $frontendUrl = rtrim((string) env('FRONTEND_URL', config('app.url')), '/');
+            $frontendUrl = rtrim((string) config('app.frontend_url', config('app.url')), '/');
 
             return $frontendUrl . '/reset-password?token=' . urlencode($token)
                 . '&email=' . urlencode($user->getEmailForPasswordReset());
