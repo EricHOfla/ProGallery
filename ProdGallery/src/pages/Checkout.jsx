@@ -5,11 +5,13 @@ import Button from "../components/common/Button";
 import SectionTitle from "../components/common/SectionTitle";
 import { useCart } from "../context/CartContext";
 import { useOrders } from "../context/OrderContext";
+import { useAuth } from "../context/AuthContext";
 
 export default function Checkout() {
   const navigate = useNavigate();
   const { cart, getTotalPrice, clearCart } = useCart();
   const { createOrder } = useOrders();
+  const { isAuthenticated } = useAuth();
 
   const [paymentMethod, setPaymentMethod] = useState("card");
   const [couponCode, setCouponCode] = useState("");
@@ -24,13 +26,13 @@ export default function Checkout() {
     address: "",
     city: "",
     zipCode: "",
-    cardNumber: "",
-    expiryDate: "",
-    cvv: "",
   });
 
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderId, setOrderId] = useState("");
+  const [orderTotal, setOrderTotal] = useState(0);
+  const [submitError, setSubmitError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   // Coupon codes
   const validCoupons = {
@@ -82,46 +84,46 @@ export default function Checkout() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Validate form
-    if (!formData.firstName || !formData.lastName || !formData.email) {
-      alert("Please fill in all required fields");
+    setSubmitError("");
+    if (!isAuthenticated()) {
+      navigate("/login");
       return;
     }
-
-    // Create order object
-    const orderData = {
-      items: cart,
-      subtotal: getSubtotal(),
-      tax: getTax(),
-      discount: getDiscount(),
-      shipping: 0,
-      total: getTotal(),
-      shippingInfo: {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        phone: formData.phone,
-        address: formData.address,
-        city: formData.city,
-        zipCode: formData.zipCode,
-      },
-      paymentMethod: paymentMethod,
-      couponCode: appliedCoupon?.code || null,
-    };
-
-    // Save order to context
-    const newOrder = await createOrder(orderData);
-    setOrderId(newOrder.orderNumber || newOrder.id);
-    setOrderPlaced(true);
-    
-    // Clear cart
-    clearCart();
-
-    // Redirect after 5 seconds
-    setTimeout(() => {
-      navigate("/orders");
-    }, 5000);
+    if (!formData.firstName || !formData.lastName || !formData.email) {
+      setSubmitError("Please complete your name and email before placing the order.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const orderData = {
+        items: cart,
+        subtotal: getSubtotal(),
+        tax: getTax(),
+        discount: getDiscount(),
+        shipping: 0,
+        total: getTotal(),
+        shippingInfo: {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          address: formData.address,
+          city: formData.city,
+          zipCode: formData.zipCode,
+        },
+        paymentMethod,
+        couponCode: appliedCoupon?.code || null,
+      };
+      const newOrder = await createOrder(orderData);
+      setOrderId(newOrder.orderNumber || newOrder.id);
+      setOrderTotal(Number(newOrder.total ?? newOrder.total_amount ?? getSubtotal()));
+      setOrderPlaced(true);
+      clearCart();
+    } catch (error) {
+      setSubmitError(error?.message || "We could not place your order. Your cart has been kept; please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (cart.length === 0 && !orderPlaced) {
@@ -169,8 +171,9 @@ export default function Checkout() {
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 mb-8">
             <p className="text-gray-600 mb-4">Your order ID:</p>
             <p className="text-2xl font-bold text-emerald-600 mb-6">{orderId}</p>
-            <p className="text-gray-600">
-              A confirmation email has been sent to <strong>{formData.email}</strong>
+            <p className="text-gray-700">
+              Your order has been recorded, but payment has <strong>not</strong> been processed.
+              No confirmation email has been sent by this application.
             </p>
           </div>
 
@@ -181,11 +184,11 @@ export default function Checkout() {
                 <strong>Items:</strong> {cart.length}
               </p>
               <p className="mb-2">
-                <strong>Total Amount:</strong> ${getTotal().toFixed(2)}
+                <strong>Order Total:</strong> ${orderTotal.toFixed(2)}
               </p>
               <p>
                 <strong>Status:</strong>{" "}
-                <span className="text-green-600">Confirmed</span>
+                <span className="text-amber-700">Pending payment</span>
               </p>
             </div>
           </div>
@@ -215,6 +218,7 @@ export default function Checkout() {
         {/* Checkout Form */}
         <div className="lg:col-span-2 w-full">
           <form onSubmit={handleSubmit} className="space-y-8">
+            {submitError && <div role="alert" className="rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-800">{submitError}</div>}
             {/* Shipping Information */}
             <div className="border border-gray-200 rounded-lg p-6 md:p-8">
               <h3 className="text-xl font-bold mb-6">Shopping Information</h3>
@@ -296,7 +300,10 @@ export default function Checkout() {
 
             {/* Payment Method */}
             <div className="border border-gray-200 rounded-lg p-6 md:p-8">
-              <h3 className="text-xl font-bold mb-6">Payment Method</h3>
+              <h3 className="text-xl font-bold mb-2">Preferred Payment Method</h3>
+              <p className="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                Online payment is not connected yet. Do not enter card details. Orders remain pending until a payment provider or manual payment process is configured.
+              </p>
 
               <div className="space-y-4 mb-8">
                 <label className="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-emerald-600 transition"
@@ -339,42 +346,10 @@ export default function Checkout() {
                 </label>
               </div>
 
-              {/* Card Details */}
-              {paymentMethod === "card" && (
-                <div className="space-y-4">
-                  <input
-                    type="text"
-                    name="cardNumber"
-                    placeholder="Card Number (16 digits)"
-                    value={formData.cardNumber}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-emerald-600"
-                  />
-                  <div className="grid grid-cols-2 gap-4">
-                    <input
-                      type="text"
-                      name="expiryDate"
-                      placeholder="MM/YY"
-                      value={formData.expiryDate}
-                      onChange={handleChange}
-                      className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-emerald-600"
-                    />
-                    <input
-                      type="text"
-                      name="cvv"
-                      placeholder="CVV"
-                      value={formData.cvv}
-                      onChange={handleChange}
-                      className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-emerald-600"
-                    />
-                  </div>
-                </div>
-              )}
-
               {paymentMethod === "mobile" && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <p className="text-sm text-gray-700">
-                    You will receive a prompt on your registered mobile number to complete the payment.
+                    Mobile Money processing is not connected. The order will remain pending until payment is arranged.
                   </p>
                 </div>
               )}
@@ -382,7 +357,7 @@ export default function Checkout() {
               {paymentMethod === "bank" && (
                 <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
                   <p className="text-sm text-gray-700">
-                    Bank details will be provided after placing your order.
+                    Bank transfer is not automated. Payment instructions must be confirmed by the store administrator.
                   </p>
                 </div>
               )}
