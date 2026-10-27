@@ -25,8 +25,8 @@ This checklist is the release gate for the customer storefront and admin workspa
 - [ ] Confirm admin create/edit/delete actions persist after refresh and failures are clearly reported.
 - [ ] Confirm deleted records do not reappear due to seeders or stale client state.
 - [ ] Verify staff permissions for all admin endpoints, not only hidden navigation links.
-- [ ] Agree final licensing terms, currency, tax, delivery, refund, and cancellation policies.
-- [ ] Add editable store settings only when backed by persistent server-side configuration.
+- [ ] Approve final licensing terms, currency, tax, delivery, refund, and cancellation policies before production.
+- [x] Add persistent admin store settings for store identity, support contacts, license pricing multipliers, and customer policies.
 
 ## Experience and quality
 
