@@ -138,6 +138,7 @@ export const photosAPI = {
 
   // Admin endpoints
   create: async (formData) => {
+    assertApiConfigured();
     const token = getAuthToken();
     
     const headers = {
@@ -158,6 +159,7 @@ export const photosAPI = {
   },
 
   update: async (id, formData) => {
+    assertApiConfigured();
     const token = getAuthToken();
     
     const headers = {
@@ -232,6 +234,7 @@ export const ordersAPI = {
   },
 
   getInvoiceHtml: async (orderId) => {
+    assertApiConfigured();
     const token = getAuthToken();
 
     const headers = {
@@ -255,6 +258,7 @@ export const ordersAPI = {
   },
 
   downloadImages: async (orderId) => {
+    assertApiConfigured();
     const token = getAuthToken();
 
     const headers = {};
