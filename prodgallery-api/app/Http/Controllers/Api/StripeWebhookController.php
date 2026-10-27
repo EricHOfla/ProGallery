@@ -63,8 +63,26 @@ class StripeWebhookController extends Controller
             $expectedAmount = $orderForAmount ? (int) round((float) $orderForAmount->total_amount * 100) : -1;
             $receivedAmount = isset($object['amount_total']) ? (int) $object['amount_total'] : -2;
 
-            if (!$orderForAmount || !$sessionId || $orderForAmount->payment_provider_session_id !== $sessionId) {
-                Log::warning('Stripe webhook session does not match an order', [
+            if (!$orderForAmount || !$sessionId) {
+                Log::warning('Stripe webhook session references an unknown order or session', [
+                    'event_id' => $event['id'],
+                    'order_id' => $orderId,
+                ]);
+                return response()->json(['received' => true]);
+            }
+
+            if (!$orderForAmount->payment_provider_session_id) {
+                // Checkout can complete before the API request has persisted its session ID.
+                // Return a retryable response rather than losing the successful payment event.
+                Log::notice('Stripe webhook arrived before the Checkout session was persisted', [
+                    'event_id' => $event['id'],
+                    'order_id' => $orderForAmount->id,
+                ]);
+                return response()->json(['message' => 'Checkout session is not persisted yet'], 500);
+            }
+
+            if ($orderForAmount->payment_provider_session_id !== $sessionId) {
+                Log::warning('Stripe webhook session does not match the saved order session', [
                     'event_id' => $event['id'],
                     'order_id' => $orderId,
                 ]);
@@ -136,7 +154,17 @@ class StripeWebhookController extends Controller
 
             DB::transaction(function () use ($orderId, $refundId, $object) {
                 $order = Order::lockForUpdate()->find($orderId);
-                if (!$order || $order->stripe_refund_id !== $refundId) {
+                if (!$order) {
+                    return;
+                }
+
+                if (!$order->stripe_refund_id && $order->payment_status === 'paid') {
+                    // Stripe can deliver refund.updated before the API request persists the refund ID.
+                    // Retry the webhook so this refund state is not lost.
+                    throw new \RuntimeException('Refund reference has not been persisted yet.');
+                }
+
+                if ($order->stripe_refund_id !== $refundId) {
                     return;
                 }
 
