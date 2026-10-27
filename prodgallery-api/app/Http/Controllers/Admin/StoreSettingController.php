@@ -13,6 +13,19 @@ class StoreSettingController extends Controller
         return response()->json(StoreSetting::values());
     }
 
+    public function publicSettings()
+    {
+        $settings = StoreSetting::values();
+
+        return response()->json([
+            'store_name' => $settings['store_name'],
+            'support_email' => $settings['support_email'],
+            'support_phone' => $settings['support_phone'],
+            'refund_policy' => $settings['refund_policy'],
+            'delivery_policy' => $settings['delivery_policy'],
+        ]);
+    }
+
     public function update(Request $request)
     {
         $validated = $request->validate([
