@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Cart;
 use App\Models\Photo;
+use App\Models\StoreSetting;
 use Illuminate\Http\Request;
 
 class CartController extends Controller
@@ -15,8 +16,9 @@ class CartController extends Controller
             ->where('user_id', $request->user()->id)
             ->get();
 
-        $cart->each(function ($item) {
-            $item->setAttribute('price', round((float) $item->photo->price * $this->licenseMultiplier($item->license_type), 2));
+        $settings = StoreSetting::values();
+        $cart->each(function ($item) use ($settings) {
+            $item->setAttribute('price', round((float) $item->photo->price * $this->licenseMultiplier($item->license_type, $settings), 2));
         });
 
         return response()->json($cart);
@@ -72,13 +74,13 @@ class CartController extends Controller
         return response()->json(['message' => 'Item removed from cart']);
     }
 
-    private function licenseMultiplier(string $license): int
+    private function licenseMultiplier(string $license, array $settings): float
     {
-        return match ($license) {
+        return (float) ($settings[$license . '_license_multiplier'] ?? match ($license) {
             'commercial' => 2,
             'extended' => 5,
             default => 1,
-        };
+        });
     }
 
     public function clear(Request $request)
