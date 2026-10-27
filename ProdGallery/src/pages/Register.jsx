@@ -6,7 +6,7 @@ import { useAuth } from "../context/AuthContext";
 
 export default function Register() {
   const navigate = useNavigate();
-  const { register: registerUser, loading, error: authError } = useAuth();
+  const { register: registerUser, loading } = useAuth();
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -58,7 +58,7 @@ export default function Register() {
   };
 
   const passwordMismatch = Boolean(formData.confirmPassword) && formData.password !== formData.confirmPassword;
-  const visibleError = error || authError;
+  const visibleError = error;
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:py-12">
