@@ -15,6 +15,10 @@ class CartController extends Controller
             ->where('user_id', $request->user()->id)
             ->get();
 
+        $cart->each(function ($item) {
+            $item->setAttribute('price', round((float) $item->photo->price * $this->licenseMultiplier($item->license_type), 2));
+        });
+
         return response()->json($cart);
     }
 
@@ -23,10 +27,12 @@ class CartController extends Controller
         $request->validate([
             'photo_id' => 'required|exists:photos,id',
             'quantity' => 'required|integer|min:1',
+            'license_type' => 'sometimes|in:personal,commercial,extended',
         ]);
 
         $cartItem = Cart::where('user_id', $request->user()->id)
             ->where('photo_id', $request->photo_id)
+            ->where('license_type', $request->input('license_type', 'personal'))
             ->first();
 
         if ($cartItem) {
@@ -38,6 +44,7 @@ class CartController extends Controller
             'user_id' => $request->user()->id,
             'photo_id' => $request->photo_id,
             'quantity' => $request->quantity,
+            'license_type' => $request->input('license_type', 'personal'),
         ]);
 
         return response()->json($cart, 201);
@@ -63,6 +70,15 @@ class CartController extends Controller
         $cart->delete();
 
         return response()->json(['message' => 'Item removed from cart']);
+    }
+
+    private function licenseMultiplier(string $license): int
+    {
+        return match ($license) {
+            'commercial' => 2,
+            'extended' => 5,
+            default => 1,
+        };
     }
 
     public function clear(Request $request)
