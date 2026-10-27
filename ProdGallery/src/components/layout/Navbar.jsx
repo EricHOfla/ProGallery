@@ -1,8 +1,10 @@
-import { Link, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { Link, NavLink, useNavigate } from "react-router-dom";
+import { useState } from "react";
 import Container from "../common/Container";
 import { useCart } from "../../context/CartContext";
 import { useAuth } from "../../context/AuthContext";
+
+const linkClass = ({ isActive }) => `rounded-lg px-3 py-2 text-sm font-semibold transition ${isActive ? "bg-emerald-50 text-emerald-800" : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"}`;
 
 export default function Navbar() {
   const { getTotalItems } = useCart();
@@ -11,136 +13,58 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const cartCount = getTotalItems();
+  const closeMenu = () => { setMenuOpen(false); setProfileOpen(false); };
+  const handleLogout = () => { logout(); closeMenu(); navigate("/"); };
+  const initials = [user?.firstName?.[0], user?.lastName?.[0]].filter(Boolean).join("").toUpperCase() || user?.name?.[0]?.toUpperCase() || "U";
 
-  useEffect(() => {
-    const handleClickOutside = () => {
-      if (profileOpen) setProfileOpen(false);
-    };
-    
-    if (profileOpen) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
-    }
-  }, [profileOpen]);
-
-  const handleLogout = () => {
-    logout();
-    setMenuOpen(false);
-    setProfileOpen(false);
-    navigate("/");
-  };
+  const links = [
+    { to: "/", label: "Home", end: true },
+    { to: "/gallery", label: "Gallery" },
+    { to: "/services", label: "Services" },
+    { to: "/about", label: "Our story" },
+    { to: "/contact", label: "Contact" },
+  ];
 
   return (
-    <nav className="bg-white shadow-sm sticky top-0 z-50">
-      <Container className="py-3 md:py-4 flex justify-between items-center">
-        {/* Logo */}
-        <Link to="/" className="flex items-center shrink-0">
-          <img 
-            src="/src/assets/logo/prodgallery-logo.jpeg"
-            alt="ProdGallery"
-            className="h-12 md:h-16 w-auto"
-          />
+    <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 shadow-sm shadow-slate-900/[0.02] backdrop-blur-xl">
+      <Container className="flex min-h-[76px] items-center justify-between gap-4 py-3">
+        <Link to="/" onClick={closeMenu} aria-label="ProdGallery home" className="flex shrink-0 items-center gap-3">
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-slate-950 text-sm font-black tracking-tight text-emerald-300 shadow-sm">PG</span>
+          <span><span className="block text-lg font-bold leading-tight tracking-tight text-slate-950">ProdGallery</span><span className="hidden text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 sm:block">Photography marketplace</span></span>
         </Link>
 
-        {/* Desktop Menu */}
-        <ul className="hidden md:flex gap-6 lg:gap-8 items-center">
-          <li><Link to="/" className="text-gray-700 hover:text-emerald-600 text-sm">Home</Link></li>
-          <li><Link to="/gallery" className="text-gray-700 hover:text-emerald-600 text-sm">Gallery</Link></li>
-          <li><Link to="/about" className="text-gray-700 hover:text-emerald-600 text-sm">About</Link></li>
-          <li><Link to="/services" className="text-gray-700 hover:text-emerald-600 text-sm">Services</Link></li>
-          {user && <li><Link to="/orders" className="text-gray-700 hover:text-emerald-600 text-sm">Orders</Link></li>}
-          <li><Link to="/contact" className="text-gray-700 hover:text-emerald-600 text-sm">Contact</Link></li>
-          
-          {user ? (
-            <>
-              <li>
-                <Link to="/cart" className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium">
-                  Cart {cartCount > 0 && `(${cartCount})`}
-                </Link>
-              </li>
-              <li className="relative">
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setProfileOpen(!profileOpen);
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 text-sm font-medium"
-                >
-                  <span className="w-8 h-8 bg-emerald-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
-                    {user.firstName?.[0]}{user.lastName?.[0]}
-                  </span>
-                  <span>{user.firstName}</span>
-                  <svg className={`w-4 h-4 transition ${profileOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                
-                {profileOpen && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-                    <div className="p-3 border-b border-gray-200">
-                      <p className="font-semibold text-sm">{user.firstName} {user.lastName}</p>
-                      <p className="text-xs text-gray-600 truncate">{user.email}</p>
-                    </div>
-                    <Link to="/orders" onClick={() => setProfileOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">My Orders</Link>
-                    <Link to="/change-password" onClick={() => setProfileOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Change Password</Link>
-                    {user.role === 'admin' && (
-                      <Link to="/admin" onClick={() => setProfileOpen(false)} className="block px-4 py-2 text-sm text-emerald-600 hover:bg-emerald-50 border-t">Admin Panel</Link>
-                    )}
-                    <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t">Logout</button>
-                  </div>
-                )}
-              </li>
-            </>
-          ) : (
-            <li><Link to="/login" className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium">Login</Link></li>
-          )}
-        </ul>
+        <nav aria-label="Main navigation" className="hidden items-center gap-1 lg:flex">
+          {links.map((link) => <NavLink key={link.to} to={link.to} end={link.end} className={linkClass}>{link.label}</NavLink>)}
+        </nav>
 
-        {/* Mobile Menu Button */}
-        <button
-          onClick={() => setMenuOpen(!menuOpen)}
-          className="md:hidden p-2 hover:bg-gray-100 rounded-lg"
-          aria-label="Menu"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={menuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
-          </svg>
+        <div className="hidden items-center gap-2 lg:flex">
+          {user ? <>
+            <Link to="/favorites" className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">Saved photos</Link><Link to="/orders" className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">My orders</Link>
+            <Link to="/cart" className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-emerald-300 px-4 text-sm font-bold text-slate-950 transition hover:bg-emerald-200"><span>Cart</span><span className="grid min-w-5 place-items-center rounded-full bg-slate-950/10 px-1.5 py-0.5 text-xs">{cartCount}</span></Link>
+            <div className="relative">
+              <button type="button" onClick={() => setProfileOpen((value) => !value)} aria-expanded={profileOpen} className="ml-1 flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 p-1.5 pr-3 hover:bg-slate-50">
+                <span className="grid h-8 w-8 place-items-center rounded-lg bg-slate-950 text-xs font-bold text-emerald-300">{initials}</span><span className="max-w-24 truncate text-sm font-semibold text-slate-700">{user.firstName || user.name || "Account"}</span><span className="text-xs text-slate-400">⌄</span>
+              </button>
+              {profileOpen && <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl shadow-slate-900/10">
+                <div className="border-b border-slate-100 px-3 py-2"><p className="truncate text-sm font-bold text-slate-900">{user.firstName} {user.lastName}</p><p className="truncate text-xs text-slate-500">{user.email}</p></div>
+                <Link to="/orders" onClick={closeMenu} className="mt-1 block rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50">My orders</Link>
+                <Link to="/change-password" onClick={closeMenu} className="block rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50">Change password</Link>
+                {user.role === "admin" && <Link to="/admin" onClick={closeMenu} className="block rounded-lg px-3 py-2.5 text-sm font-semibold text-emerald-800 hover:bg-emerald-50">Open admin workspace ↗</Link>}
+                <button type="button" onClick={handleLogout} className="mt-1 w-full rounded-lg border-t border-slate-100 px-3 py-2.5 text-left text-sm font-semibold text-rose-700 hover:bg-rose-50">Sign out</button>
+              </div>}
+            </div>
+          </> : <><Link to="/login" className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Sign in</Link><Link to="/register" className="inline-flex min-h-10 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-bold text-white transition hover:bg-emerald-800">Create account</Link></>}
+        </div>
+
+        <button type="button" onClick={() => setMenuOpen((value) => !value)} aria-expanded={menuOpen} aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"} className="grid h-11 w-11 place-items-center rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 lg:hidden">
+          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeWidth="1.8" strokeLinecap="round" d={menuOpen ? "M6 6l12 12M18 6 6 18" : "M4 7h16M4 12h16M4 17h16"} /></svg>
         </button>
       </Container>
 
-      {/* Mobile Menu */}
-      {menuOpen && (
-        <div className="md:hidden bg-white border-t">
-          <ul className="flex flex-col p-4 space-y-2">
-            <li><Link to="/" className="block text-gray-700 hover:text-emerald-600 py-2" onClick={() => setMenuOpen(false)}>Home</Link></li>
-            <li><Link to="/gallery" className="block text-gray-700 hover:text-emerald-600 py-2" onClick={() => setMenuOpen(false)}>Gallery</Link></li>
-            <li><Link to="/about" className="block text-gray-700 hover:text-emerald-600 py-2" onClick={() => setMenuOpen(false)}>About</Link></li>
-            <li><Link to="/services" className="block text-gray-700 hover:text-emerald-600 py-2" onClick={() => setMenuOpen(false)}>Services</Link></li>
-            {user && <li><Link to="/orders" className="block text-gray-700 hover:text-emerald-600 py-2" onClick={() => setMenuOpen(false)}>Orders</Link></li>}
-            <li><Link to="/contact" className="block text-gray-700 hover:text-emerald-600 py-2" onClick={() => setMenuOpen(false)}>Contact</Link></li>
-            
-            {user ? (
-              <>
-                <li className="border-t pt-3 mt-2">
-                  <div className="px-3 py-2 text-sm">
-                    <p className="font-semibold">{user.firstName} {user.lastName}</p>
-                    <p className="text-xs text-gray-600">{user.email}</p>
-                  </div>
-                </li>
-                <li><Link to="/cart" className="block px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium" onClick={() => setMenuOpen(false)}>Cart {cartCount > 0 && `(${cartCount})`}</Link></li>
-                <li><Link to="/orders" className="block text-gray-700 hover:text-emerald-600 py-2" onClick={() => setMenuOpen(false)}>My Orders</Link></li>
-                <li><Link to="/change-password" className="block text-gray-700 hover:text-emerald-600 py-2" onClick={() => setMenuOpen(false)}>Change Password</Link></li>
-                {user.role === 'admin' && (
-                  <li><Link to="/admin" className="block text-emerald-600 hover:text-emerald-700 py-2 font-medium" onClick={() => setMenuOpen(false)}>Admin Panel</Link></li>
-                )}
-                <li><button onClick={handleLogout} className="block w-full text-left px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium">Logout</button></li>
-              </>
-            ) : (
-              <li><Link to="/login" className="block px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium text-center" onClick={() => setMenuOpen(false)}>Login</Link></li>
-            )}
-          </ul>
-        </div>
-      )}
-    </nav>
+      {menuOpen && <div className="border-t border-slate-200 bg-white px-4 pb-5 pt-3 shadow-lg lg:hidden"><nav aria-label="Mobile navigation" className="mx-auto flex max-w-7xl flex-col gap-1">
+        {links.map((link) => <NavLink key={link.to} to={link.to} end={link.end} onClick={closeMenu} className={linkClass}>{link.label}</NavLink>)}
+        {user ? <><Link to="/favorites" onClick={closeMenu} className="rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Saved photos</Link><Link to="/orders" onClick={closeMenu} className="rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">My orders</Link><Link to="/cart" onClick={closeMenu} className="rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Shopping cart ({cartCount})</Link><Link to="/change-password" onClick={closeMenu} className="rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Change password</Link>{user.role === "admin" && <Link to="/admin" onClick={closeMenu} className="rounded-lg bg-emerald-50 px-3 py-3 text-sm font-bold text-emerald-900">Admin workspace ↗</Link>}<button type="button" onClick={handleLogout} className="mt-2 min-h-11 rounded-xl border border-rose-200 px-3 text-left text-sm font-semibold text-rose-700">Sign out</button></> : <div className="mt-3 grid grid-cols-2 gap-2"><Link to="/login" onClick={closeMenu} className="rounded-xl border border-slate-200 px-4 py-3 text-center text-sm font-semibold">Sign in</Link><Link to="/register" onClick={closeMenu} className="rounded-xl bg-slate-950 px-4 py-3 text-center text-sm font-semibold text-white">Create account</Link></div>}
+      </nav></div>}
+    </header>
   );
 }

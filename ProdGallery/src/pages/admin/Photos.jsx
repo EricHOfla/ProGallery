@@ -1,206 +1,54 @@
-import { useState, useEffect } from 'react';
-import { photosAPI } from '../../services/api';
-import { Link } from 'react-router-dom';
-import { resolveImageUrl } from '../../utils/image';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { photosAPI } from "../../services/api";
+import { resolveImageUrl } from "../../utils/image";
 
 export default function AdminPhotos() {
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [search, setSearch] = useState("");
+  const [deletingId, setDeletingId] = useState(null);
 
-  useEffect(() => {
-    fetchPhotos();
+  const load = useCallback(async () => {
+    setLoading(true); setError("");
+    try {
+      const response = await photosAPI.getAll();
+      setPhotos(Array.isArray(response) ? response : response?.data || []);
+    } catch (err) { setError(err?.message || "Photos could not be loaded."); }
+    finally { setLoading(false); }
   }, []);
+  useEffect(() => { load(); }, [load]);
 
-  const fetchPhotos = async () => {
+  const visiblePhotos = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return photos.filter((photo) => !query || [photo.title, photo.description, photo.photographer, photo.category?.name].filter(Boolean).join(" ").toLowerCase().includes(query));
+  }, [photos, search]);
+
+  const handleDelete = async (photo) => {
+    if (!window.confirm(`Delete "${photo.title}"? This action cannot be undone.`)) return;
+    setDeletingId(photo.id); setError(""); setNotice("");
     try {
-      const data = await photosAPI.getAll();
-      setPhotos(Array.isArray(data) ? data : data?.data || []);
-    } catch (err) {
-      setError('Failed to fetch photos');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+      await photosAPI.delete(photo.id);
+      setPhotos((current) => current.filter((item) => item.id !== photo.id));
+      setNotice("Photo deleted successfully.");
+    } catch (err) { setError(err?.message || "Photo could not be deleted. It is still in your gallery."); }
+    finally { setDeletingId(null); }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this photo?')) return;
+  return <div className="space-y-6">
+    <section className="rounded-3xl bg-slate-950 p-6 text-white sm:p-8"><div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-300">Catalogue management</p><h2 className="mt-2 text-2xl font-bold sm:text-3xl">Photos & gallery</h2><p className="mt-2 text-sm leading-6 text-slate-300">Publish, update and organize the images customers can discover and license.</p></div><Link to="/admin/photos/new" className="inline-flex min-h-11 items-center justify-center rounded-xl bg-emerald-300 px-4 text-sm font-bold text-slate-950 hover:bg-emerald-200">+ Add a photo</Link></div><div className="mt-6 grid grid-cols-2 gap-3 sm:max-w-md"><div className="rounded-xl border border-white/10 bg-white/5 p-3"><p className="text-xs text-slate-400">Total listings</p><p className="mt-1 text-2xl font-bold">{photos.length}</p></div><div className="rounded-xl border border-white/10 bg-white/5 p-3"><p className="text-xs text-slate-400">Featured work</p><p className="mt-1 text-2xl font-bold">{photos.filter((photo) => photo.featured).length}</p></div></div></section>
 
-    try {
-      await photosAPI.delete(id);
-      setPhotos(photos.filter(photo => photo.id !== id));
-    } catch (err) {
-      alert('Failed to delete photo');
-      console.error(err);
-    }
-  };
+    {error && <div role="alert" className="flex flex-col gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 sm:flex-row sm:items-center sm:justify-between"><span>{error}</span><button onClick={load} type="button" className="self-start rounded-lg border border-rose-300 px-3 py-2 font-semibold sm:self-auto">Try again</button></div>}
+    {notice && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</p>}
 
-  const skeletonRows = Array.from({ length: 6 }, (_, index) => (
-    <tr key={`skeleton-${index}`} className="animate-pulse">
-      <td className="px-6 py-4 whitespace-nowrap">
-        <div className="h-16 w-16 bg-gray-200 rounded" />
-      </td>
-      <td className="px-6 py-4">
-        <div className="h-4 w-3/4 bg-gray-200 rounded mb-2" />
-        <div className="h-3 w-1/2 bg-gray-200 rounded" />
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        <div className="h-3 w-2/3 bg-gray-200 rounded" />
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        <div className="h-3 w-1/3 bg-gray-200 rounded" />
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        <div className="h-5 w-16 bg-gray-200 rounded-full" />
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap text-right">
-        <div className="h-3 w-20 bg-gray-200 rounded ml-auto" />
-      </td>
-    </tr>
-  ));
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <div className="h-8 w-48 bg-gray-200 rounded mb-2 animate-pulse" />
-              <div className="h-4 w-72 bg-gray-200 rounded animate-pulse" />
-            </div>
-            <div className="h-10 w-40 bg-gray-200 rounded animate-pulse" />
-          </div>
-
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  {['Image', 'Title', 'Category', 'Price', 'Status', 'Actions'].map((label) => (
-                    <th
-                      key={label}
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      {label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {skeletonRows}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Manage Photos</h1>
-            <p className="text-gray-600 mt-2">Add, edit, or remove photos from your gallery</p>
-          </div>
-          <Link
-            to="/admin/photos/new"
-            className="bg-emerald-600 text-white px-6 py-3 rounded-lg hover:bg-emerald-700 transition-colors inline-flex items-center"
-          >
-            <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Add New Photo
-          </Link>
-        </div>
-
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-            {error}
-          </div>
-        )}
-
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          {photos.length > 0 ? (
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Image
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Title
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Category
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Price
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {photos.map((photo) => (
-                  <tr key={photo.id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <img
-                        src={resolveImageUrl(photo.image)}
-                        alt={photo.title}
-                        className="h-16 w-16 object-cover rounded"
-                      />
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900">{photo.title}</div>
-                      <div className="text-sm text-gray-500">{photo.photographer}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {photo.category?.name || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      ${parseFloat(photo.price).toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        photo.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {photo.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <Link
-                        to={`/admin/photos/edit/${photo.id}`}
-                        className="text-emerald-600 hover:text-emerald-900 mr-4"
-                      >
-                        Edit
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(photo.id)}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <div className="px-6 py-12 text-center text-gray-500">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <p className="mt-2">No photos found. Add your first photo to get started.</p>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"><div><h3 className="font-bold text-slate-900">Your catalogue</h3><p className="mt-1 text-sm text-slate-500">{visiblePhotos.length} of {photos.length} listings</p></div><label className="block w-full sm:max-w-sm"><span className="sr-only">Search photos</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search title, category, photographer…" className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-emerald-400 focus:bg-white focus:ring-2 focus:ring-emerald-100" /></label></div>
+      {loading ? <div className="space-y-3 p-5">{[1,2,3,4,5].map((n) => <div key={n} className="h-20 animate-pulse rounded-xl bg-slate-100" />)}</div> : visiblePhotos.length ? <>
+        <div className="hidden overflow-x-auto lg:block"><table className="w-full min-w-[800px] text-left"><thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500"><tr><th className="px-5 py-4">Photo</th><th className="px-5 py-4">Category</th><th className="px-5 py-4">Price</th><th className="px-5 py-4">Visibility</th><th className="px-5 py-4">Actions</th></tr></thead><tbody className="divide-y divide-slate-100">{visiblePhotos.map((photo) => <tr key={photo.id} className="hover:bg-slate-50/70"><td className="px-5 py-4"><div className="flex items-center gap-3"><img src={resolveImageUrl(photo.image)} alt="" className="h-14 w-16 rounded-lg bg-slate-100 object-cover" /><div className="min-w-0"><p className="max-w-xs truncate text-sm font-bold text-slate-900">{photo.title}</p><p className="mt-1 max-w-xs truncate text-xs text-slate-500">{photo.photographer || "Photographer not specified"}</p></div></div></td><td className="px-5 py-4 text-sm text-slate-600">{photo.category?.name || "Uncategorized"}</td><td className="px-5 py-4 text-sm font-bold">${Number(photo.price || 0).toFixed(2)}</td><td className="px-5 py-4"><div className="flex flex-wrap gap-1.5"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${photo.is_active === false ? "bg-slate-100 text-slate-600" : "bg-emerald-50 text-emerald-800"}`}>{photo.is_active === false ? "Hidden" : "Published"}</span>{photo.featured && <span className="rounded-full bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-800">Featured</span>}</div></td><td className="px-5 py-4"><div className="flex items-center gap-2"><Link to={`/admin/photos/edit/${photo.id}`} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold hover:bg-slate-50">Edit</Link><button type="button" disabled={deletingId === photo.id} onClick={() => handleDelete(photo)} className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50">{deletingId === photo.id ? "Deleting…" : "Delete"}</button></div></td></tr>)}</tbody></table></div>
+        <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:hidden">{visiblePhotos.map((photo) => <article key={photo.id} className="overflow-hidden rounded-2xl border border-slate-200"><img src={resolveImageUrl(photo.image)} alt={photo.title || "Gallery photo"} className="h-48 w-full bg-slate-100 object-cover" /><div className="space-y-3 p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="truncate font-bold text-slate-900">{photo.title}</h3><p className="mt-1 text-sm text-slate-500">{photo.category?.name || "Uncategorized"}</p></div><p className="shrink-0 font-bold">${Number(photo.price || 0).toFixed(2)}</p></div><div className="flex flex-wrap gap-2"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${photo.is_active === false ? "bg-slate-100 text-slate-600" : "bg-emerald-50 text-emerald-800"}`}>{photo.is_active === false ? "Hidden" : "Published"}</span>{photo.featured && <span className="rounded-full bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-800">Featured</span>}</div><div className="grid grid-cols-2 gap-2 border-t border-slate-100 pt-3"><Link to={`/admin/photos/edit/${photo.id}`} className="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-200 text-sm font-semibold">Edit photo</Link><button type="button" disabled={deletingId === photo.id} onClick={() => handleDelete(photo)} className="min-h-10 rounded-xl border border-rose-200 text-sm font-semibold text-rose-700 disabled:opacity-50">{deletingId === photo.id ? "Deleting…" : "Delete"}</button></div></div></article>)}</div>
+      </> : <div className="px-6 py-16 text-center"><p className="font-semibold text-slate-900">{search ? "No photos match your search" : "Your gallery is ready for its first photo"}</p><p className="mt-2 text-sm text-slate-500">{search ? "Try another title or category." : "Add a photo to start building your catalogue."}</p>{search ? <button type="button" onClick={() => setSearch("")} className="mt-4 text-sm font-bold text-emerald-800">Clear search</button> : <Link to="/admin/photos/new" className="mt-4 inline-flex min-h-10 items-center rounded-xl bg-slate-950 px-4 text-sm font-bold text-white">Add first photo</Link>}</div>}
+    </section>
+  </div>;
 }

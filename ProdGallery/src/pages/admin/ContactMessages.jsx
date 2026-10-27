@@ -1,176 +1,53 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { contactMessagesAPI } from "../../services/api";
 
 export default function ContactMessages() {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedMessage, setSelectedMessage] = useState(null);
+  const [search, setSearch] = useState("");
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [deletingId, setDeletingId] = useState(null);
 
-  useEffect(() => {
-    fetchMessages();
+  const load = useCallback(async () => {
+    setLoading(true); setError("");
+    try {
+      const response = await contactMessagesAPI.getAll();
+      setMessages(Array.isArray(response) ? response : response?.data || []);
+    } catch (err) { setError(err?.message || "Messages could not be loaded."); }
+    finally { setLoading(false); }
   }, []);
+  useEffect(() => { load(); }, [load]);
 
-  const fetchMessages = async () => {
+  const filtered = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return messages.filter((message) => !query || [message.name, message.email, message.subject, message.message].filter(Boolean).join(" ").toLowerCase().includes(query));
+  }, [messages, search]);
+
+  const deleteMessage = async (message) => {
+    if (!window.confirm(`Delete the message from ${message.name || message.email || "this sender"}?`)) return;
+    setDeletingId(message.id); setError(""); setNotice("");
     try {
-      setLoading(true);
-      const data = await contactMessagesAPI.getAll();
-      setMessages(data);
-    } catch (err) {
-      alert("Failed to load messages");
-    } finally {
-      setLoading(false);
-    }
+      await contactMessagesAPI.delete(message.id);
+      setMessages((current) => current.filter((item) => item.id !== message.id));
+      setSelectedMessage((current) => current?.id === message.id ? null : current);
+      setNotice("Message deleted successfully.");
+    } catch (err) { setError(err?.message || "The message could not be deleted."); }
+    finally { setDeletingId(null); }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm("Are you sure you want to delete this message?")) return;
+  const date = (value) => value ? new Date(value).toLocaleString() : "Date unavailable";
 
-    try {
-      await contactMessagesAPI.delete(id);
-      fetchMessages();
-    } catch (err) {
-      alert("Failed to delete message");
-    }
-  };
+  return <div className="space-y-6">
+    <section className="rounded-3xl bg-slate-950 p-6 text-white sm:p-8"><p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-300">Customer care</p><h2 className="mt-2 text-2xl font-bold sm:text-3xl">Contact messages</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">Keep customer questions organized and respond directly to the people contacting your store.</p><div className="mt-6 grid max-w-md grid-cols-2 gap-3"><div className="rounded-xl border border-white/10 bg-white/5 p-3"><p className="text-xs text-slate-400">All messages</p><p className="mt-1 text-2xl font-bold">{messages.length}</p></div><div className="rounded-xl border border-white/10 bg-white/5 p-3"><p className="text-xs text-slate-400">Search results</p><p className="mt-1 text-2xl font-bold">{filtered.length}</p></div></div></section>
+    {error && <div role="alert" className="flex flex-col gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 sm:flex-row sm:items-center sm:justify-between"><span>{error}</span><button type="button" onClick={load} className="self-start rounded-lg border border-rose-300 px-3 py-2 font-semibold sm:self-auto">Retry</button></div>}
+    {notice && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</p>}
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="border-b border-slate-200 p-4 sm:p-5"><label className="block"><span className="sr-only">Search messages</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search sender, email, subject or message…" className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-emerald-400 focus:bg-white focus:ring-2 focus:ring-emerald-100" /></label></div>
+      {loading ? <div className="space-y-3 p-5">{[1,2,3,4].map((n) => <div key={n} className="h-24 animate-pulse rounded-xl bg-slate-100" />)}</div> : filtered.length ? <div className="divide-y divide-slate-100">{filtered.map((message) => <article key={message.id} className="p-4 transition hover:bg-slate-50/70 sm:p-5"><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div className="min-w-0"><p className="font-bold text-slate-900">{message.name || "Unknown sender"}</p><a href={`mailto:${message.email}`} className="mt-1 block break-all text-sm text-emerald-800 hover:underline">{message.email}</a><p className="mt-1 text-xs text-slate-400">{date(message.created_at)}</p></div><div className="flex shrink-0 flex-wrap gap-2"><button type="button" onClick={() => setSelectedMessage(message)} className="min-h-9 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 hover:bg-white">Read message</button><button type="button" disabled={deletingId === message.id} onClick={() => deleteMessage(message)} className="min-h-9 rounded-lg border border-rose-200 px-3 text-xs font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50">{deletingId === message.id ? "Deleting…" : "Delete"}</button></div></div>{message.subject && <p className="mt-3 text-sm font-semibold text-slate-800">{message.subject}</p>}<p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-600">{message.message?.length > 240 ? `${message.message.slice(0, 240)}…` : message.message}</p><div className="mt-3 border-t border-slate-100 pt-3"><a href={`mailto:${message.email}?subject=${encodeURIComponent(message.subject ? `Re: ${message.subject}` : "Re: your message to ProdGallery")}`} className="inline-flex min-h-9 items-center rounded-lg bg-slate-950 px-3 text-xs font-bold text-white hover:bg-emerald-800">Reply by email ↗</a></div></article>)}</div> : <div className="px-6 py-16 text-center"><p className="font-semibold text-slate-900">{search ? "No messages match your search" : "No contact messages yet"}</p><p className="mt-2 text-sm text-slate-500">{search ? "Try another name, email or keyword." : "New customer messages will appear here."}</p>{search && <button type="button" onClick={() => setSearch("")} className="mt-3 text-sm font-bold text-emerald-800">Clear search</button>}</div>}
+    </section>
 
-  if (loading) {
-    return (
-      <div className="p-6">
-        <h1 className="text-2xl font-bold mb-6">Contact Messages</h1>
-        <div className="bg-white rounded-lg shadow">
-          <div className="animate-pulse space-y-4 p-6">
-            {Array.from({ length: 5 }, (_, i) => (
-              <div key={i} className="h-20 bg-gray-200 rounded" />
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Contact Messages</h1>
-
-      {messages.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-8 text-center">
-          <p className="text-gray-600">No messages yet</p>
-        </div>
-      ) : (
-        <div className="grid gap-6">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition"
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold">{message.name}</h3>
-                  <p className="text-sm text-gray-600">{message.email}</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {new Date(message.created_at).toLocaleString()}
-                  </p>
-                </div>
-                <button
-                  onClick={() => handleDelete(message.id)}
-                  className="text-red-600 hover:text-red-800 font-medium"
-                >
-                  Delete
-                </button>
-              </div>
-
-              {message.subject && (
-                <p className="font-medium text-gray-800 mb-2">
-                  Subject: {message.subject}
-                </p>
-              )}
-
-              <p className="text-gray-700 whitespace-pre-wrap">
-                {message.message}
-              </p>
-
-              <div className="mt-4 pt-4 border-t flex gap-4">
-                <a
-                  href={`mailto:${message.email}`}
-                  className="text-emerald-600 hover:text-emerald-700 font-medium"
-                >
-                  Reply via Email
-                </a>
-                <button
-                  onClick={() => setSelectedMessage(message)}
-                  className="text-blue-600 hover:text-blue-700 font-medium"
-                >
-                  View Details
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Message Details Modal */}
-      {selectedMessage && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
-            <div className="flex justify-between items-start mb-4">
-              <h2 className="text-xl font-bold">Message Details</h2>
-              <button
-                onClick={() => setSelectedMessage(null)}
-                className="text-gray-500 hover:text-gray-700 text-2xl"
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-semibold text-gray-700">Name</label>
-                <p className="text-gray-900">{selectedMessage.name}</p>
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-gray-700">Email</label>
-                <p className="text-gray-900">{selectedMessage.email}</p>
-              </div>
-              {selectedMessage.subject && (
-                <div>
-                  <label className="text-sm font-semibold text-gray-700">Subject</label>
-                  <p className="text-gray-900">{selectedMessage.subject}</p>
-                </div>
-              )}
-              <div>
-                <label className="text-sm font-semibold text-gray-700">Message</label>
-                <p className="text-gray-900 whitespace-pre-wrap">
-                  {selectedMessage.message}
-                </p>
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-gray-700">Received</label>
-                <p className="text-gray-900">
-                  {new Date(selectedMessage.created_at).toLocaleString()}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6 flex gap-3">
-              <a
-                href={`mailto:${selectedMessage.email}`}
-                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-center"
-              >
-                Reply via Email
-              </a>
-              <button
-                onClick={() => {
-                  handleDelete(selectedMessage.id);
-                  setSelectedMessage(null);
-                }}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+    {selectedMessage && <div className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedMessage(null); }}><section role="dialog" aria-modal="true" aria-labelledby="message-dialog-title" className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl sm:rounded-3xl sm:p-7"><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-800">Customer enquiry</p><h3 id="message-dialog-title" className="mt-2 text-xl font-bold text-slate-950">Message details</h3></div><button type="button" onClick={() => setSelectedMessage(null)} aria-label="Close message details" className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-slate-200 text-xl text-slate-600 hover:bg-slate-50">×</button></div><div className="mt-6 grid gap-4 rounded-2xl bg-slate-50 p-4 sm:grid-cols-2"><div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">From</p><p className="mt-1 font-semibold text-slate-900">{selectedMessage.name || "Unknown sender"}</p></div><div><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Received</p><p className="mt-1 text-sm text-slate-800">{date(selectedMessage.created_at)}</p></div><div className="sm:col-span-2"><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Email</p><a href={`mailto:${selectedMessage.email}`} className="mt-1 block break-all text-sm font-semibold text-emerald-800">{selectedMessage.email}</a></div>{selectedMessage.subject && <div className="sm:col-span-2"><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Subject</p><p className="mt-1 font-semibold text-slate-900">{selectedMessage.subject}</p></div>}</div><div className="mt-5"><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Message</p><p className="mt-2 whitespace-pre-wrap break-words text-sm leading-7 text-slate-700">{selectedMessage.message}</p></div><div className="mt-7 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><button type="button" onClick={() => setSelectedMessage(null)} className="min-h-11 rounded-xl border border-slate-200 px-4 text-sm font-semibold">Close</button><a href={`mailto:${selectedMessage.email}?subject=${encodeURIComponent(selectedMessage.subject ? `Re: ${selectedMessage.subject}` : "Re: your message to ProdGallery")}`} className="inline-flex min-h-11 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-bold text-white">Reply by email ↗</a></div></section></div>}
+  </div>;
 }

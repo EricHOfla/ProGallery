@@ -1,150 +1,36 @@
 import { Link } from "react-router-dom";
+import { useState } from "react";
 import Container from "../components/common/Container";
-import Button from "../components/common/Button";
-import SectionTitle from "../components/common/SectionTitle";
 import { useCart } from "../context/CartContext";
 import { resolveImageUrl } from "../utils/image";
 
+const money = (value) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number(value || 0));
+const licenseNames = { personal: "Personal use", commercial: "Commercial use", extended: "Extended use" };
+
 export default function Cart() {
-  const { cart, removeFromCart, updateQuantity, getTotalPrice } = useCart();
+  const { cart, removeFromCart, updateQuantity, getTotalPrice, loading, error } = useCart();
+  const [busyId, setBusyId] = useState(null);
+  const [actionError, setActionError] = useState("");
+  const [notice, setNotice] = useState("");
+  const itemTotal = getTotalPrice();
+  const count = cart.reduce((sum, item) => sum + Number(item.quantity || 1), 0);
 
-  if (cart.length === 0) {
-    return (
-      <Container className="py-20">
-        <SectionTitle
-          title="Shopping Cart"
-          subtitle="Your cart is empty"
-        />
-        <div className="text-center">
-          <p className="text-gray-600 mb-8">
-            Start adding photos to your cart to get started!
-          </p>
-          <Button variant="primary">
-            <Link to="/gallery">Continue Shopping</Link>
-          </Button>
-        </div>
-      </Container>
-    );
-  }
+  const runAction = async (key, action, successMessage) => {
+    setBusyId(key); setActionError(""); setNotice("");
+    try { await action(); setNotice(successMessage); }
+    catch (err) { setActionError(err?.message || "That cart update failed. Please try again."); }
+    finally { setBusyId(null); }
+  };
 
-  return (
-    <Container className="py-16">
-      <SectionTitle
-        title="Shopping Cart"
-        subtitle={`${cart.length} item${cart.length !== 1 ? "s" : ""} in your cart`}
-      />
+  if (loading && cart.length === 0) return <Container className="py-16"><div className="animate-pulse space-y-4"><div className="h-10 w-64 rounded-xl bg-slate-200" /><div className="h-36 rounded-2xl bg-slate-100" /><div className="h-36 rounded-2xl bg-slate-100" /></div></Container>;
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
-        {/* Cart Items */}
-        <div className="lg:col-span-2">
-          <div className="space-y-4">
-            {cart.map((item) => {
-              const photo = item.photo || item;
-              const photoId = item.photo_id || item.photo?.id || item.id;
-              const quantity = Number(item.quantity) || 1;
-              return (
-              <div
-                key={item.id}
-                className="flex flex-col sm:flex-row gap-4 sm:gap-6 border border-gray-200 rounded-lg p-4 md:p-6 hover:shadow-lg transition"
-              >
-                {/* Product Image */}
-                <div className="w-24 h-24 shrink-0">
-                  <img
-                    src={resolveImageUrl(photo.image)}
-                    alt={photo.title}
-                    className="w-full h-full object-cover rounded"
-                  />
-                </div>
-
-                {/* Product Details */}
-                <div className="grow flex-1">
-                  <h3 className="text-lg font-semibold mb-2">{photo.title}</h3>
-                  <p className="text-gray-600 text-sm mb-2">{photo.category?.name || photo.category}</p>
-                  <p className="text-logo-blue font-bold">${photo.price}</p>
-                </div>
-
-                {/* Quantity & Remove */}
-                <div className="flex flex-row sm:flex-col justify-between sm:justify-between items-center sm:items-end gap-3">
-                  <button
-                    onClick={() => removeFromCart(photoId)}
-                    className="text-red-600 hover:text-red-700 text-sm font-medium"
-                  >
-                    Remove
-                  </button>
-
-                  <div className="flex items-center gap-3 border border-gray-300 rounded">
-                    <button
-                      onClick={() => updateQuantity(photoId, quantity - 1)}
-                      className="px-3 py-1 hover:bg-gray-100"
-                    >
-                      −
-                    </button>
-                    <span className="px-4 py-1 min-w-12 text-center">
-                      {quantity}
-                    </span>
-                    <button
-                      onClick={() => updateQuantity(photoId, quantity + 1)}
-                      className="px-3 py-1 hover:bg-gray-100"
-                    >
-                      +
-                    </button>
-                  </div>
-
-                  <p className="font-bold">
-                    ${(parseFloat(photo.price) * quantity).toFixed(2)}
-                  </p>
-                </div>
-              </div>
-            );
-            })}
-          </div>
-        </div>
-
-        {/* Order Summary */}
-        <div className="lg:col-span-1">
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 md:p-8 sticky top-20">
-            <h3 className="text-xl font-bold mb-6">Order Summary</h3>
-
-            <div className="space-y-4 mb-6">
-              <div className="flex justify-between">
-                <span className="text-gray-700">Subtotal</span>
-                <span className="font-semibold">${getTotalPrice().toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-700">Shipping</span>
-                <span className="font-semibold">Free</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-700">Tax</span>
-                <span className="font-semibold">
-                  ${(getTotalPrice() * 0.1).toFixed(2)}
-                </span>
-              </div>
-            </div>
-
-            <div className="border-t pt-4 mb-6">
-              <div className="flex justify-between">
-                <span className="font-bold text-lg">Total</span>
-                <span className="font-bold text-lg text-logo-blue">
-                  ${(getTotalPrice() * 1.1).toFixed(2)}
-                </span>
-              </div>
-            </div>
-
-            <Link to="/checkout" className="block mb-3">
-              <Button variant="primary" className="w-full">
-                Proceed to Checkout
-              </Button>
-            </Link>
-
-            <Link to="/gallery" className="block">
-              <Button variant="secondary" className="w-full">
-                Continue Shopping
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </div>
-    </Container>
-  );
+  return <div className="min-h-[65vh] bg-slate-50"><Container className="py-10 sm:py-16">
+    <div className="mb-8"><p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-800">Your selection</p><h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">Shopping cart</h1><p className="mt-2 text-sm text-slate-500">{count} {count === 1 ? "item" : "items"} ready for checkout</p></div>
+    {(actionError || error) && <div role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">{actionError || error}</div>}
+    {notice && <p role="status" className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</p>}
+    {!cart.length ? <section className="rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center"><span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-emerald-50 text-2xl text-emerald-800">▣</span><h2 className="mt-4 text-xl font-bold text-slate-950">Your cart is empty</h2><p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">Discover photography, choose a license, and add the images you want to keep.</p><Link to="/gallery" className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-slate-950 px-5 text-sm font-bold text-white hover:bg-emerald-800">Explore the gallery ↗</Link></section> : <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_350px] lg:gap-8">
+      <section className="space-y-4">{cart.map((item) => { const photo = item.photo || item; const photoId = item.photo_id || item.photo?.id || item.id; const key = item.id; const quantity = Number(item.quantity) || 1; const unitPrice = Number(item.price ?? photo.price ?? 0); const license = item.license_type || "personal"; return <article key={key} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"><div className="flex gap-4 sm:gap-5"><Link to={`/photo/${photoId}`} className="h-28 w-28 shrink-0 overflow-hidden rounded-xl bg-slate-100 sm:h-36 sm:w-36"><img src={resolveImageUrl(photo.image)} alt={photo.title || "Selected photo"} className="h-full w-full object-cover transition hover:scale-105" /></Link><div className="min-w-0 flex-1"><div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start"><div className="min-w-0"><Link to={`/photo/${photoId}`} className="font-bold text-slate-950 hover:text-emerald-800">{photo.title || "Photography"}</Link><p className="mt-1 text-sm text-slate-500">{photo.category?.name || photo.category || "Digital photography"}</p></div><p className="shrink-0 text-lg font-bold text-slate-950">{money(unitPrice * quantity)}</p></div><span className="mt-3 inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800">{licenseNames[license] || licenseNames.personal}</span><p className="mt-2 text-xs text-slate-500">{money(unitPrice)} each · Digital download</p><div className="mt-4 flex flex-wrap items-center justify-between gap-3"><div className="inline-flex items-center rounded-xl border border-slate-200"><button type="button" aria-label={`Decrease quantity for ${photo.title}`} disabled={busyId === key || quantity <= 1} onClick={() => runAction(key, () => updateQuantity(photoId, quantity - 1), "Cart updated.")} className="h-9 w-10 rounded-l-xl text-lg hover:bg-slate-50 disabled:opacity-40">−</button><span className="min-w-10 text-center text-sm font-semibold">{quantity}</span><button type="button" aria-label={`Increase quantity for ${photo.title}`} disabled={busyId === key} onClick={() => runAction(key, () => updateQuantity(photoId, quantity + 1), "Cart updated.")} className="h-9 w-10 rounded-r-xl text-lg hover:bg-slate-50 disabled:opacity-40">+</button></div><button type="button" disabled={busyId === key} onClick={() => runAction(key, () => removeFromCart(photoId), "Item removed from your cart.")} className="min-h-9 rounded-lg px-3 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50">{busyId === key ? "Updating…" : "Remove"}</button></div></div></div></article>; })}<Link to="/gallery" className="inline-flex min-h-10 items-center text-sm font-semibold text-emerald-800 hover:underline">← Continue browsing</Link></section>
+      <aside className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 lg:sticky lg:top-28"><h2 className="text-lg font-bold text-slate-950">Order summary</h2><p className="mt-1 text-sm text-slate-500">Digital photography licensing</p><div className="mt-6 space-y-3 text-sm"><div className="flex justify-between gap-4"><span className="text-slate-600">Items ({count})</span><span className="font-semibold text-slate-900">{money(itemTotal)}</span></div><div className="flex justify-between gap-4"><span className="text-slate-600">Delivery</span><span className="font-semibold text-emerald-800">Digital · Free</span></div><div className="flex justify-between gap-4"><span className="text-slate-600">Tax</span><span className="font-semibold text-slate-900">Calculated if applicable</span></div></div><div className="my-5 border-t border-slate-200" /><div className="flex items-end justify-between gap-3"><span className="font-bold text-slate-950">Subtotal</span><span className="text-2xl font-bold tracking-tight text-slate-950">{money(itemTotal)}</span></div><p className="mt-2 text-xs leading-5 text-slate-500">Final payment amount is confirmed at checkout. License terms apply to each selected image.</p><Link to="/checkout" className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-bold text-white transition hover:bg-emerald-800">Continue to secure checkout ↗</Link><div className="mt-4 flex items-center justify-center gap-2 text-xs text-slate-500"><span className="text-emerald-700">✓</span> Secure checkout · Digital delivery</div></aside>
+    </div>}
+  </Container></div>;
 }
