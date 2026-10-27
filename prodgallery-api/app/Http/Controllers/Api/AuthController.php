@@ -15,11 +15,13 @@ class AuthController extends Controller
 {
     public function register(Request $request)
     {
+        $request->merge(['email' => strtolower(trim((string) $request->input('email', '')))]);
+
         $request->validate([
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'email' => 'required|string|email|unique:users',
-            'password' => 'required|string|min:6',
+            'password' => 'required|string|min:8|max:128',
         ]);
 
         $user = User::create([
@@ -48,6 +50,8 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
+        $request->merge(['email' => strtolower(trim((string) $request->input('email', '')))]);
+
         $request->validate([
             'email' => 'required|email',
             'password' => 'required',
@@ -100,7 +104,7 @@ class AuthController extends Controller
     {
         $request->validate([
             'current_password' => 'required',
-            'new_password' => 'required|string|min:6|confirmed',
+            'new_password' => 'required|string|min:8|max:128|confirmed',
         ]);
 
         $user = $request->user();
@@ -120,6 +124,8 @@ class AuthController extends Controller
 
     public function forgotPassword(Request $request)
     {
+        $request->merge(['email' => strtolower(trim((string) $request->input('email', '')))]);
+
         $request->validate([
             'email' => 'required|email',
         ]);
@@ -135,6 +141,8 @@ class AuthController extends Controller
 
     public function resetPassword(Request $request)
     {
+        $request->merge(['email' => strtolower(trim((string) $request->input('email', '')))]);
+
         $request->validate([
             'email' => 'required|email',
             'token' => 'required|string',
