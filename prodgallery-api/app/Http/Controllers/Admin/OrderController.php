@@ -94,17 +94,22 @@ class OrderController extends Controller
             return response()->json(['message' => 'Stripe did not confirm the refund. The order has not been marked refunded.'], 502);
         }
 
+        $refundStatus = $response->json('status');
+        $refundSucceeded = $refundStatus === 'succeeded';
+
         $order->update([
-            'payment_status' => 'refunded',
+            'payment_status' => $refundSucceeded ? 'refunded' : 'refund_pending',
             'stripe_refund_id' => $response->json('id'),
-            'refunded_at' => now(),
-            'status' => 'cancelled',
+            'refunded_at' => $refundSucceeded ? now() : null,
+            'status' => $refundSucceeded ? 'cancelled' : $order->status,
         ]);
 
         return response()->json([
-            'message' => 'Refund submitted to Stripe.',
+            'message' => $refundSucceeded
+                ? 'Refund completed successfully.'
+                : 'Refund was accepted by Stripe and is pending. The order will not be marked refunded until Stripe confirms completion.',
             'order' => $order->fresh(),
-            'refund_status' => $response->json('status'),
+            'refund_status' => $refundStatus,
         ]);
     }
 }
