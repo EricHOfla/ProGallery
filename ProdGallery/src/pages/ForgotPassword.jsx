@@ -9,7 +9,6 @@ export default function ForgotPassword() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [email, setEmail] = useState('');
-  const [resetData, setResetData] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -18,9 +17,8 @@ export default function ForgotPassword() {
     setSuccess(false);
 
     try {
-      const response = await authAPI.forgotPassword(email);
+      await authAPI.forgotPassword(email);
       setSuccess(true);
-      setResetData(response); // For testing purposes
     } catch (err) {
       setError(err.message || 'Failed to send reset email');
     } finally {
@@ -66,28 +64,11 @@ export default function ForgotPassword() {
                 </div>
               </div>
 
-              {/* Testing only - remove in production */}
-              {resetData && resetData.reset_token && (
-                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <p className="text-yellow-800 font-medium text-sm mb-2">⚠️ Testing Mode</p>
-                  <p className="text-yellow-700 text-xs mb-2">
-                    In production, this would be sent via email. For testing:
-                  </p>
-                  <Link
-                    to={`/reset-password?token=${resetData.reset_token}&email=${resetData.email}`}
-                    className="text-blue-600 hover:text-blue-700 text-sm font-medium underline"
-                  >
-                    Click here to reset password
-                  </Link>
-                </div>
-              )}
-
               <div className="text-center space-y-3">
                 <button
                   onClick={() => {
                     setSuccess(false);
                     setEmail('');
-                    setResetData(null);
                   }}
                   className="text-emerald-600 hover:text-emerald-700 text-sm font-medium"
                 >
