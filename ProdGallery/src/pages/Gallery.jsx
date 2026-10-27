@@ -20,6 +20,10 @@ export default function Gallery() {
   const [showFilters, setShowFilters] = useState(true);
 
   useEffect(() => {
+    setPage(1);
+  }, [searchTerm, minPrice, maxPrice, sortBy, sortOrder, selectedCategory]);
+
+  useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
