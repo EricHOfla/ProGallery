@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class StripeWebhookTest extends TestCase
@@ -120,6 +121,37 @@ class StripeWebhookTest extends TestCase
             'payment_intent_id' => 'pi_test_progallery',
             'status' => 'completed',
         ]);
+    }
+
+
+    public function test_refund_webhook_marks_pending_refund_as_completed(): void
+    {
+        $order = $this->makePendingOrder();
+        $order->update([
+            'payment_status' => 'refund_pending',
+            'payment_intent_id' => 'pi_test_progallery',
+            'stripe_refund_id' => 're_test_progallery',
+        ]);
+
+        $payload = json_encode([
+            'id' => 'evt_refund_updated',
+            'type' => 'refund.updated',
+            'data' => ['object' => [
+                'id' => 're_test_progallery',
+                'status' => 'succeeded',
+                'metadata' => ['order_id' => (string) $order->id],
+            ]],
+        ]);
+
+        $this->sendSignedPayload($payload)->assertOk()->assertJson(['received' => true]);
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'payment_status' => 'refunded',
+            'status' => 'cancelled',
+            'stripe_refund_id' => 're_test_progallery',
+        ]);
+        $this->assertNotNull($order->fresh()->refunded_at);
     }
 
     private function makePendingOrder(): Order
