@@ -1,83 +1,21 @@
+import { Link } from "react-router-dom";
 import Container from "../common/Container";
 
 export default function Footer() {
-  const currentYear = new Date().getFullYear();
-
-  return (
-    <footer className="bg-gray-900 text-white mt-12 md:mt-20">
-      <Container className="py-8 md:py-12">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 mb-8">
-          <div>
-            <img
-              src="/src/assets/logo/prodgallery-logo.jpeg"
-              alt="ProdGallery Logo"
-              className="h-12 w-auto mb-4"
-            />
-            <p className="text-gray-400">
-              Turning moments into timeless stories through photography and
-              videography.
-            </p>
-          </div>
-
-          <div>
-            <h4 className="font-semibold mb-4">Quick Links</h4>
-            <ul className="text-gray-400 space-y-2">
-              <li>
-                <a href="/" className="hover:text-emerald-400 transition">
-                  Home
-                </a>
-              </li>
-              <li>
-                <a href="/gallery" className="hover:text-emerald-400 transition">
-                  Gallery
-                </a>
-              </li>
-              <li>
-                <a href="/about" className="hover:text-emerald-400 transition">
-                  About
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="font-semibold mb-4">Services</h4>
-            <ul className="text-gray-400 space-y-2">
-              <li>
-                <a href="/services" className="hover:text-emerald-400 transition">
-                  Weddings
-                </a>
-              </li>
-              <li>
-                <a href="/services" className="hover:text-emerald-400 transition">
-                  Portraits
-                </a>
-              </li>
-              <li>
-                <a href="/services" className="hover:text-emerald-400 transition">
-                  Corporate
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="font-semibold mb-4">Contact</h4>
-            <ul className="text-gray-400 space-y-2">
-              <li>Email: prodgallery7@gmail.com</li>
-              <li>Phone: +250 786 079 810</li>
-              <li>Address: Remera, Gasabo, Kigali, Rwanda</li>
-            </ul>
-          </div>
+  const year = new Date().getFullYear();
+  return <footer className="mt-16 bg-slate-950 text-white sm:mt-24">
+    <Container className="py-12 sm:py-16">
+      <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1.2fr] lg:gap-12">
+        <div>
+          <Link to="/" className="inline-flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-xl bg-emerald-300 text-sm font-black text-slate-950">PG</span><span className="text-xl font-bold tracking-tight">ProdGallery</span></Link>
+          <p className="mt-5 max-w-sm text-sm leading-7 text-slate-400">A curated home for photography. Discover meaningful images, choose the right license, and keep the moments that matter.</p>
+          <span className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-slate-300"><span className="h-2 w-2 rounded-full bg-emerald-300" /> Photography worth keeping</span>
         </div>
-
-        <div className="border-t border-gray-800 pt-6 md:pt-8 text-center text-gray-400 text-xs md:text-sm">
-          <p>
-            &copy; {currentYear} ProdGallery. All rights reserved. | Privacy
-            Policy | Terms of Service
-          </p>
-        </div>
-      </Container>
-    </footer>
-  );
+        <div><h2 className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-300">Explore</h2><div className="mt-5 flex flex-col items-start gap-3 text-sm text-slate-400"><Link className="hover:text-white" to="/">Home</Link><Link className="hover:text-white" to="/gallery">Photo gallery</Link><Link className="hover:text-white" to="/services">Services</Link><Link className="hover:text-white" to="/about">Our story</Link></div></div>
+        <div><h2 className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-300">Your account</h2><div className="mt-5 flex flex-col items-start gap-3 text-sm text-slate-400"><Link className="hover:text-white" to="/login">Sign in</Link><Link className="hover:text-white" to="/register">Create account</Link><Link className="hover:text-white" to="/orders">Order history</Link><Link className="hover:text-white" to="/contact">Contact support</Link></div></div>
+        <div><h2 className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-300">Get in touch</h2><p className="mt-5 text-sm leading-7 text-slate-400">Have a question about a photo, license or booking? We would be happy to hear from you.</p><Link to="/contact" className="mt-4 inline-flex min-h-10 items-center justify-center rounded-xl bg-white px-4 text-sm font-bold text-slate-950 transition hover:bg-emerald-200">Contact the team ↗</Link></div>
+      </div>
+      <div className="mt-12 flex flex-col gap-3 border-t border-white/10 pt-6 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between"><p>© {year} ProdGallery. All rights reserved.</p><p>Made for the moments worth remembering.</p></div>
+    </Container>
+  </footer>;
 }
