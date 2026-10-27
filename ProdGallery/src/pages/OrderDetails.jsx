@@ -34,6 +34,7 @@ export default function OrderDetails() {
             image: item.photo?.image,
             category: item.photo?.category?.name,
             price: parseFloat(item.price),
+            licenseType: item.license_type || 'personal',
             quantity: item.quantity,
           })),
           subtotal: parseFloat(data.total_amount),
@@ -356,6 +357,7 @@ export default function OrderDetails() {
                   <div className="flex-1">
                     <h3 className="font-semibold mb-1">{item.title}</h3>
                     <p className="text-sm text-gray-600">{item.category}</p>
+                    <p className="text-sm text-gray-600">License: {item.licenseType}</p>
                     <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
                   </div>
                   <div className="text-right">
