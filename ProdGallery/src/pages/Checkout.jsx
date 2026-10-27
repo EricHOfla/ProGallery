@@ -386,7 +386,6 @@ export default function Checkout() {
                 <span className="text-gray-700">Subtotal</span>
                 <span className="font-semibold">${getSubtotal().toFixed(2)}</span>
               </div>
-}
               <div className="flex justify-between">
                 <span className="text-gray-700">Tax and delivery</span>
                 <span className="font-semibold">Not configured</span>
