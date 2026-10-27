@@ -32,6 +32,7 @@ Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/categories/{id}', [CategoryController::class, 'show']);
 
 Route::post('/contact', [ContactController::class, 'store']);
+Route::get('/store-settings', [StoreSettingController::class, 'publicSettings']);
 Route::post('/webhooks/stripe', StripeWebhookController::class);
 
 // Protected routes
