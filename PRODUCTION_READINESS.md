@@ -8,8 +8,8 @@ This checklist is the release gate for the customer storefront and admin workspa
 - [ ] Confirm the webhook endpoint is reachable over HTTPS and verifies signatures.
 - [ ] Test successful, canceled, expired, and failed checkout sessions.
 - [ ] Verify repeated webhook deliveries do not duplicate payment or order side effects.
-- [ ] Add and test a provider-backed refund workflow before advertising self-service refunds.
-- [ ] Confirm order status and payment status remain distinct and consistent.
+- [ ] Apply the refund-tracking migration and test full refunds with Stripe test-mode payments, including provider-pending and failed responses.
+- [ ] Confirm order status and payment status remain distinct and consistent, including refund-pending and refunded states.
 - [ ] Verify download access is granted only for eligible, paid orders.
 
 ## Email and customer communication
@@ -43,7 +43,7 @@ This checklist is the release gate for the customer storefront and admin workspa
 
 - Stripe live payments require real provider credentials and a verified webhook.
 - Email delivery requires a production mail transport; a log mailer does not send messages.
-- Refund automation is not implemented yet. Until it is implemented and tested, handle refunds through the payment provider dashboard and communicate the status to the customer.
+- An admin-triggered full-refund workflow is now implemented against Stripe's API. It requires the database migration and must be tested in Stripe test mode before production use. Partial refunds and automated customer refund emails are not included yet.
 - Licensing multipliers and terms are starter defaults and must be approved before public sale.
 
 Do not mark any unchecked item complete based only on local UI appearance. Record the test environment, date, and result when each release check is completed.
