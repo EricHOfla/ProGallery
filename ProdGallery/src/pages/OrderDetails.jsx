@@ -13,6 +13,7 @@ export default function OrderDetails() {
   const [error, setError] = useState(null);
   const [downloading, setDownloading] = useState(false);
   const [downloadingImages, setDownloadingImages] = useState(false);
+  const [startingPayment, setStartingPayment] = useState(false);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -26,6 +27,7 @@ export default function OrderDetails() {
           orderNumber: data.order_number,
           date: data.created_at,
           status: data.status,
+          paymentStatus: data.payment_status || "pending",
           items: (data.items || []).map((item) => ({
             id: item.id,
             title: item.photo?.title,
@@ -64,6 +66,20 @@ export default function OrderDetails() {
 
     fetchOrder();
   }, [orderId]);
+
+  const handlePayNow = async () => {
+    try {
+      setStartingPayment(true);
+      setError(null);
+      const session = await ordersAPI.createPaymentSession(orderId);
+      if (!session.url) throw new Error("The payment provider did not return a checkout link.");
+      window.location.assign(session.url);
+    } catch (paymentError) {
+      setError(paymentError.message || "Unable to start payment. Please try again later.");
+    } finally {
+      setStartingPayment(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -418,11 +434,12 @@ export default function OrderDetails() {
           <div className="border border-gray-200 rounded-lg p-6">
             <h2 className="text-xl font-bold mb-4">Payment Method</h2>
             <div className="text-sm text-gray-700">
-              <p className="capitalize">{order.paymentMethod}</p>
-              {order.paymentMethod === "card" && (
-                <p className="text-gray-500 mt-1">
-                  Card ending in ****
-                </p>
+              <p className="capitalize">Method: {order.paymentMethod}</p>
+              <p className="mt-2">Payment status: <strong className={order.paymentStatus === "paid" ? "text-emerald-700" : "text-amber-700"}>{order.paymentStatus}</strong></p>
+              {order.paymentStatus !== "paid" && (
+                <Button variant="primary" className="mt-4 w-full" onClick={handlePayNow} disabled={startingPayment}>
+                  {startingPayment ? "Opening secure checkout..." : "Pay securely"}
+                </Button>
               )}
             </div>
           </div>
