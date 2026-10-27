@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Cart;
 use App\Models\OrderItem;
+use App\Models\StoreSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
@@ -43,6 +44,7 @@ class OrderController extends Controller
         ]);
 
         $order = DB::transaction(function () use ($request, $validated) {
+            $settings = StoreSetting::values();
             // Lock cart rows to prevent concurrent checkout requests from duplicating an order.
             $cartItems = Cart::with('photo')
                 ->where('user_id', $request->user()->id)
@@ -58,8 +60,11 @@ class OrderController extends Controller
             }
 
             // Compute prices from the database, never from browser-submitted totals.
-            $licenseMultiplier = fn ($license) => match ($license) { 'commercial' => 2, 'extended' => 5, default => 1 };
-            $totalAmount = $cartItems->sum(fn ($item) => (float) $item->photo->price * $licenseMultiplier($item->license_type ?? 'personal') * (int) $item->quantity);
+            $licenseMultiplier = fn ($license) => (float) ($settings[$license . '_license_multiplier'] ?? match ($license) { 'commercial' => 2, 'extended' => 5, default => 1 });
+            // Round each unit price to the currency's two-decimal precision before
+            // summing, so the order total matches the line items charged by Stripe.
+            $unitPriceFor = fn ($item) => round((float) $item->photo->price * $licenseMultiplier($item->license_type ?? 'personal'), 2);
+            $totalAmount = round($cartItems->sum(fn ($item) => $unitPriceFor($item) * (int) $item->quantity), 2);
 
             $createdOrder = Order::create([
                 'user_id' => $request->user()->id,
@@ -76,7 +81,7 @@ class OrderController extends Controller
                     'order_id' => $createdOrder->id,
                     'photo_id' => $item->photo_id,
                     'quantity' => $item->quantity,
-                    'price' => (float) $item->photo->price * $licenseMultiplier($item->license_type ?? 'personal'),
+                    'price' => $unitPriceFor($item),
                     'license_type' => $item->license_type ?? 'personal',
                 ]);
             }
@@ -113,6 +118,14 @@ class OrderController extends Controller
             return response()->json(['message' => 'This order has already been paid.'], 409);
         }
 
+        if (in_array($order->payment_status, ['refunded', 'refund_pending'], true) || $order->status === 'cancelled') {
+            return response()->json(['message' => 'Payment cannot be started for a cancelled or refunded order.'], 409);
+        }
+
+        if ($order->items->isEmpty()) {
+            return response()->json(['message' => 'This order has no items and cannot be paid.'], 422);
+        }
+
         $secret = (string) config('services.stripe.secret');
         if ($secret === '') {
             return response()->json(['message' => 'Online payment is not configured yet. Please contact the store.'], 503);
@@ -136,9 +149,18 @@ class OrderController extends Controller
             $form["line_items[$index][quantity]"] = (string) $item->quantity;
         }
 
-        $response = \Illuminate\Support\Facades\Http::withToken($secret)
-            ->asForm()
-            ->post('https://api.stripe.com/v1/checkout/sessions', $form);
+        try {
+            $response = \Illuminate\Support\Facades\Http::withToken($secret)
+                ->asForm()
+                ->timeout(20)
+                ->post('https://api.stripe.com/v1/checkout/sessions', $form);
+        } catch (\Throwable $exception) {
+            \Illuminate\Support\Facades\Log::warning('Stripe Checkout session request failed', [
+                'order_id' => $order->id,
+                'exception' => $exception->getMessage(),
+            ]);
+            return response()->json(['message' => 'The payment provider could not be reached. Please try again.'], 502);
+        }
 
         if (!$response->successful() || empty($response->json('url')) || empty($response->json('id'))) {
             \Illuminate\Support\Facades\Log::error('Stripe Checkout session creation failed', ['order_id' => $order->id, 'status' => $response->status()]);
@@ -343,13 +365,20 @@ class OrderController extends Controller
 
                     // Parse the storage URL to get the relative path
                     // URL format: /storage/photos/filename.ext
-                    if (preg_match('#/storage/(.+)$#', $imageUrl, $matches)) {
-                        $relativePath = $matches[1]; // photos/filename.ext
-                        $actualPath = storage_path('app' . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relativePath));
+                    if (preg_match('#(?:^|/)storage/(.+)$#', $imageUrl, $matches)) {
+                        $relativePath = ltrim($matches[1], '/');
+                        $publicStorageRoot = realpath(storage_path('app' . DIRECTORY_SEPARATOR . 'public'));
+                        $candidatePath = storage_path('app' . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relativePath));
+                        $resolvedPath = realpath($candidatePath);
+
+                        // Never allow a stored image path to escape Laravel's public storage directory.
+                        if ($publicStorageRoot && $resolvedPath && str_starts_with($resolvedPath, $publicStorageRoot . DIRECTORY_SEPARATOR)) {
+                            $actualPath = $resolvedPath;
+                        }
                     }
 
                     // Verify the file exists before adding
-                    if ($actualPath && file_exists($actualPath)) {
+                    if ($actualPath && is_file($actualPath) && is_readable($actualPath)) {
                         // Use photo title for filename with extension
                         $ext = pathinfo($actualPath, PATHINFO_EXTENSION);
                         $fileName = preg_replace('/[^a-zA-Z0-9._-]/', '_', $item->photo->title) . '_' . $item->id . '.' . $ext;
@@ -375,7 +404,11 @@ class OrderController extends Controller
             if (file_exists($zipFilePath)) {
                 @unlink($zipFilePath);
             }
-            return response()->json(['message' => 'Failed to create download: ' . $e->getMessage()], 500);
+            Log::error('Order image archive creation failed', [
+                'order_id' => $order->id,
+                'exception' => $e->getMessage(),
+            ]);
+            return response()->json(['message' => 'Failed to prepare the download. Please try again or contact support.'], 500);
         }
     }
 }

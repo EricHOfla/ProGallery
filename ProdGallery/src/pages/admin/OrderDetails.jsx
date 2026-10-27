@@ -9,6 +9,8 @@ export default function AdminOrderDetails() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [actionNotice, setActionNotice] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -27,11 +29,30 @@ export default function AdminOrderDetails() {
   }, [orderId]);
 
   const handleStatusChange = async (newStatus) => {
+    setError(null);
+    setActionNotice("");
     try {
-      await ordersAPI.updateStatus(orderId, newStatus);
-      setOrder({ ...order, status: newStatus });
+      const updated = await ordersAPI.updateStatus(orderId, newStatus);
+      setOrder((current) => ({ ...current, ...(updated || {}), status: newStatus }));
+      setActionNotice("Order status updated.");
     } catch (err) {
-      alert("Failed to update order status");
+      setError(err?.message || "Failed to update order status.");
+    }
+  };
+
+  const handleRefund = async () => {
+    if (!window.confirm("Submit a full refund to Stripe for this order? This action cannot be undone here.")) return;
+    setActionLoading(true);
+    setError(null);
+    setActionNotice("");
+    try {
+      const result = await ordersAPI.refund(orderId);
+      setOrder((current) => ({ ...current, ...(result.order || {}) }));
+      setActionNotice(result.message || "Refund submitted to Stripe.");
+    } catch (err) {
+      setError(err?.message || "Refund could not be submitted. Check Stripe before retrying.");
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -169,6 +190,26 @@ export default function AdminOrderDetails() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {error && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{error}</div>}
+            {actionNotice && <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{actionNotice}</div>}
+
+            {/* Payment and refund controls */}
+            <div className="border rounded-lg p-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h2 className="text-lg font-bold">Payment & refunds</h2>
+                  <p className="mt-2 text-sm text-gray-600">Payment status: <strong className="capitalize">{String(order.payment_status || "pending").replaceAll("_", " ")}</strong></p>
+                  {order.paid_at && <p className="mt-1 text-sm text-gray-500">Paid on {new Date(order.paid_at).toLocaleString()}</p>}
+                  {order.refunded_at && <p className="mt-1 text-sm text-gray-500">Refund submitted on {new Date(order.refunded_at).toLocaleString()}</p>}
+                  {order.stripe_refund_id && <p className="mt-1 break-all text-xs text-gray-500">Stripe refund: {order.stripe_refund_id}</p>}
+                </div>
+                <button type="button" onClick={handleRefund} disabled={actionLoading || order.payment_status !== "paid" || !order.payment_intent_id || Boolean(order.stripe_refund_id)} className="inline-flex min-h-11 items-center justify-center rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50">
+                  {actionLoading ? "Submitting refund…" : order.payment_status === "refunded" ? "Refunded" : order.payment_status === "refund_pending" ? "Refund pending" : "Issue full refund"}
+                </button>
+              </div>
+              <p className="mt-3 text-xs leading-5 text-gray-500">Refunds are sent to Stripe and are available only for confirmed payments with a payment intent. Confirm the refund status in Stripe if the provider reports a pending result.</p>
             </div>
 
             {/* Customer Info */}

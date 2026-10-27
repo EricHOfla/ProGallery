@@ -295,6 +295,11 @@ export const ordersAPI = {
     });
   },
 
+  refund: async (orderId) => apiRequest(`/admin/orders/${orderId}/refund`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  }),
+
   // Admin endpoints
   getAllOrders: async () => {
     const response = await apiRequest('/admin/orders');
@@ -463,4 +468,19 @@ export default {
   contactMessagesAPI,
   analyticsAPI,
   usersAPI,
+};
+
+
+// Admin store configuration
+export const storeSettingsAPI = {
+  getPublic: () => apiRequest('/store-settings'),
+  get: () => apiRequest('/admin/settings'),
+  update: (settings) => apiRequest('/admin/settings', {
+    method: 'PUT',
+    body: JSON.stringify(settings),
+  }),
+  refundOrder: (orderId, reason) => apiRequest(`/admin/orders/${orderId}/refund`, {
+    method: 'POST',
+    body: JSON.stringify(reason ? { reason } : {}),
+  }),
 };

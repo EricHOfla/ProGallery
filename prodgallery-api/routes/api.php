@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ContactMessageController;
 use App\Http\Controllers\Admin\AnalyticsController;
+use App\Http\Controllers\Admin\StoreSettingController;
 
 // Public routes
 Route::post('/auth/register', [AuthController::class, 'register']);
@@ -31,6 +32,7 @@ Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/categories/{id}', [CategoryController::class, 'show']);
 
 Route::post('/contact', [ContactController::class, 'store']);
+Route::get('/store-settings', [StoreSettingController::class, 'publicSettings']);
 Route::post('/webhooks/stripe', StripeWebhookController::class);
 
 // Protected routes
@@ -84,6 +86,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/orders', [AdminOrderController::class, 'index']);
         Route::get('/orders/{id}', [AdminOrderController::class, 'show']);
         Route::put('/orders/{id}/status', [AdminOrderController::class, 'updateStatus']);
+        Route::post('/orders/{id}/refund', [AdminOrderController::class, 'refund']);
+
+        // Persistent store configuration
+        Route::get('/settings', [StoreSettingController::class, 'index']);
+        Route::put('/settings', [StoreSettingController::class, 'update']);
 
         // Categories management
         Route::post('/categories', [AdminCategoryController::class, 'store']);

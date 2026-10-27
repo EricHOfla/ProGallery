@@ -30,6 +30,7 @@ import AdminOrderDetails from "../pages/admin/OrderDetails";
 import AdminContactMessages from "../pages/admin/ContactMessages";
 import AdminAnalytics from "../pages/admin/Analytics";
 import AdminUsers from "../pages/admin/Users";
+import StoreSettings from "../pages/admin/StoreSettings";
 
 function AppRoutesContent() {
   const location = useLocation();
@@ -66,6 +67,7 @@ function AppRoutesContent() {
           <Route path="users" element={<AdminUsers />} />
           <Route path="messages" element={<AdminContactMessages />} />
           <Route path="analytics" element={<AdminAnalytics />} />
+          <Route path="settings" element={<StoreSettings />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>
