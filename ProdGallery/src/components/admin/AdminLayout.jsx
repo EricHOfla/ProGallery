@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 
 const navigation = [
@@ -26,6 +26,17 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+
+  useEffect(() => {
+    const closeOverlays = (event) => {
+      if (event.key === 'Escape') {
+        setSidebarOpen(false);
+        setProfileOpen(false);
+      }
+    };
+    window.addEventListener('keydown', closeOverlays);
+    return () => window.removeEventListener('keydown', closeOverlays);
+  }, []);
   const currentPage = [...pageNames].sort((a, b) => b[0].length - a[0].length)
     .find(([href]) => href === '/admin' ? location.pathname === href : location.pathname.startsWith(href));
   const pageTitle = currentPage?.[1] || 'Administration';
@@ -41,7 +52,7 @@ export default function AdminLayout() {
       <Link to="/" className="flex items-center gap-3 px-5 py-5 border-b border-slate-800" onClick={() => setSidebarOpen(false)}>
         <span className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-400 text-slate-950 font-black text-sm">PG</span>
         <span>
-          <span className="block text-base font-bold tracking-tight text-white">ProdGallery</span>
+          <span className="block text-base font-bold tracking-tight text-white">ProGallery</span>
           <span className="block text-xs text-slate-400">Store management</span>
         </span>
       </Link>
@@ -54,7 +65,7 @@ export default function AdminLayout() {
                 const active = item.exact ? location.pathname === item.href : location.pathname.startsWith(item.href);
                 return (
                   <Link key={item.href} to={item.href} onClick={() => setSidebarOpen(false)}
-                    className={`flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${active ? 'bg-emerald-400 text-slate-950 shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}>
+                    aria-current={active ? 'page' : undefined} className={`flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${active ? 'bg-emerald-400 text-slate-950 shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}>
                     <span className="grid h-6 w-6 shrink-0 place-items-center text-lg" aria-hidden="true">{item.icon}</span>
                     <span>{item.name}</span>
                     {active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-slate-950" />}
