@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Cart;
 use App\Models\OrderItem;
+use App\Models\StoreSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
@@ -43,6 +44,7 @@ class OrderController extends Controller
         ]);
 
         $order = DB::transaction(function () use ($request, $validated) {
+            $settings = StoreSetting::values();
             // Lock cart rows to prevent concurrent checkout requests from duplicating an order.
             $cartItems = Cart::with('photo')
                 ->where('user_id', $request->user()->id)
@@ -58,7 +60,7 @@ class OrderController extends Controller
             }
 
             // Compute prices from the database, never from browser-submitted totals.
-            $licenseMultiplier = fn ($license) => match ($license) { 'commercial' => 2, 'extended' => 5, default => 1 };
+            $licenseMultiplier = fn ($license) => (float) ($settings[$license . '_license_multiplier'] ?? match ($license) { 'commercial' => 2, 'extended' => 5, default => 1 });
             $totalAmount = $cartItems->sum(fn ($item) => (float) $item->photo->price * $licenseMultiplier($item->license_type ?? 'personal') * (int) $item->quantity);
 
             $createdOrder = Order::create([
