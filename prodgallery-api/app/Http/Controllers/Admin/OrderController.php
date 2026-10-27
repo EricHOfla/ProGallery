@@ -48,7 +48,11 @@ class OrderController extends Controller
     {
         $order = Order::with('user')->findOrFail($id);
 
-        if ($order->payment_status === 'refunded' || $order->stripe_refund_id) {
+        if ($order->payment_status === 'refund_pending' || $order->stripe_refund_id) {
+            return response()->json(['message' => 'A refund has already been submitted for this order. Check Stripe for its current status before taking further action.'], 409);
+        }
+
+        if ($order->payment_status === 'refunded') {
             return response()->json(['message' => 'This order has already been refunded.'], 409);
         }
 
