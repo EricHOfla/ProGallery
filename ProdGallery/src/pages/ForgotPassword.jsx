@@ -56,7 +56,7 @@ export default function ForgotPassword() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                   <div>
-                    <p className="text-green-800 font-medium">Email Sent!</p>
+                    <p className="text-green-800 font-medium">Check Your Email</p>
                     <p className="text-green-700 text-sm mt-1">
                       If an account exists with this email, you will receive password reset instructions.
                     </p>
