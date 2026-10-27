@@ -56,7 +56,8 @@ class OrderController extends Controller
             }
 
             // Compute prices from the database, never from browser-submitted totals.
-            $totalAmount = $cartItems->sum(fn ($item) => (float) $item->photo->price * (int) $item->quantity);
+            $licenseMultiplier = fn ($license) => match ($license) { 'commercial' => 2, 'extended' => 5, default => 1 };
+            $totalAmount = $cartItems->sum(fn ($item) => (float) $item->photo->price * $licenseMultiplier($item->license_type ?? 'personal') * (int) $item->quantity);
 
             $createdOrder = Order::create([
                 'user_id' => $request->user()->id,
@@ -73,7 +74,8 @@ class OrderController extends Controller
                     'order_id' => $createdOrder->id,
                     'photo_id' => $item->photo_id,
                     'quantity' => $item->quantity,
-                    'price' => $item->photo->price,
+                    'price' => (float) $item->photo->price * $licenseMultiplier($item->license_type ?? 'personal'),
+                    'license_type' => $item->license_type ?? 'personal',
                 ]);
             }
 
