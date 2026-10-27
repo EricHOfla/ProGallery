@@ -57,7 +57,7 @@ class PhotoController extends Controller
 
     public function show($id)
     {
-        $photo = Photo::with('category')->findOrFail($id);
+        $photo = Photo::with('category')->where('is_active', true)->findOrFail($id);
         return response()->json($photo);
     }
 }
