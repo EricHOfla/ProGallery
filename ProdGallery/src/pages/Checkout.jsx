@@ -6,6 +6,7 @@ import SectionTitle from "../components/common/SectionTitle";
 import { useCart } from "../context/CartContext";
 import { useOrders } from "../context/OrderContext";
 import { useAuth } from "../context/AuthContext";
+import { ordersAPI } from "../services/api";
 
 export default function Checkout() {
   const navigate = useNavigate();
@@ -27,6 +28,8 @@ export default function Checkout() {
 
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderId, setOrderId] = useState("");
+  const [orderRecordId, setOrderRecordId] = useState(null);
+  const [paymentWarning, setPaymentWarning] = useState("");
   const [orderTotal, setOrderTotal] = useState(0);
   const [orderItemCount, setOrderItemCount] = useState(0);
   const [submitError, setSubmitError] = useState("");
@@ -77,11 +80,28 @@ export default function Checkout() {
         paymentMethod,
       };
       const newOrder = await createOrder(orderData);
+      const numericOrderId = newOrder.id;
+      setOrderRecordId(numericOrderId);
       setOrderId(newOrder.orderNumber || newOrder.id);
       setOrderTotal(Number(newOrder.total ?? newOrder.total_amount ?? getSubtotal()));
       setOrderItemCount(cart.reduce((sum, item) => sum + Number(item.quantity || 1), 0));
       setOrderPlaced(true);
-      clearCart();
+      clearCart().catch(() => {});
+
+      if (paymentMethod === "card" && numericOrderId) {
+        try {
+          const payment = await ordersAPI.createPaymentSession(numericOrderId);
+          if (payment.url) {
+            window.location.assign(payment.url);
+            return;
+          }
+          setPaymentWarning("Your order was saved, but secure payment could not be started. You can retry from this page.");
+        } catch (paymentError) {
+          setPaymentWarning(paymentError?.message || "Your order was saved, but online payment is not configured yet.");
+        }
+      } else {
+        setPaymentWarning("Your order is saved and payment is pending. The store must confirm the selected manual payment method.");
+      }
     } catch (error) {
       setSubmitError(error?.message || "We could not place your order. Your cart has been kept; please try again.");
     } finally {
@@ -135,9 +155,9 @@ export default function Checkout() {
             <p className="text-gray-600 mb-4">Your order ID:</p>
             <p className="text-2xl font-bold text-emerald-600 mb-6">{orderId}</p>
             <p className="text-gray-700">
-              Your order has been recorded, but payment has <strong>not</strong> been processed.
-              No confirmation email has been sent by this application.
+              Your order has been recorded. It will only be marked paid after the payment provider confirms it.
             </p>
+            {paymentWarning && <p role="alert" className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{paymentWarning}</p>}
           </div>
 
           <div className="mb-8">
@@ -157,7 +177,7 @@ export default function Checkout() {
           </div>
 
           <p className="text-gray-600 mb-8">
-            You will be redirected to your orders page in a few seconds, or click below.
+            Keep your order number for reference. You can review its payment status in your orders.
           </p>
 
           <div className="flex gap-4 justify-center flex-wrap">

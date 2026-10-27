@@ -5,7 +5,7 @@ import Button from "../components/common/Button";
 import Reviews from "../components/gallery/Reviews";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
-import { photosAPI } from "../services/api";
+import { photosAPI, favoritesAPI } from "../services/api";
 import { resolveImageUrl } from "../utils/image";
 
 export default function PhotoDetails() {
@@ -14,6 +14,10 @@ export default function PhotoDetails() {
   const { addToCart } = useCart();
   const { user } = useAuth();
   const [addedToCart, setAddedToCart] = useState(false);
+  const [licenseType, setLicenseType] = useState("personal");
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
+  const [favoriteError, setFavoriteError] = useState("");
   const [photo, setPhoto] = useState(null);
   const [relatedPhotos, setRelatedPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -45,12 +49,33 @@ export default function PhotoDetails() {
     fetchPhoto();
   }, [id]);
 
+  useEffect(() => {
+    let active = true;
+    if (user) {
+      favoritesAPI.getAll().then((favorites) => {
+        if (active) setIsFavorite(favorites.some((favorite) => Number(favorite.photo_id || favorite.photo?.id) === Number(id)));
+      }).catch(() => { if (active) setIsFavorite(false); });
+    } else { setIsFavorite(false); }
+    return () => { active = false; };
+  }, [id, user]);
+
+  const handleFavorite = async () => {
+    if (!user) { navigate("/login"); return; }
+    setFavoriteLoading(true);
+    setFavoriteError("");
+    try {
+      if (isFavorite) { await favoritesAPI.remove(photo.id); setIsFavorite(false); }
+      else { await favoritesAPI.add(photo.id); setIsFavorite(true); }
+    } catch (favoriteRequestError) { setFavoriteError(favoriteRequestError.message || "Could not update favorites."); }
+    finally { setFavoriteLoading(false); }
+  };
+
   const handleAddToCart = () => {
     if (!user) {
       navigate("/login");
       return;
     }
-    addToCart(photo);
+    addToCart(photo, 1, licenseType);
     setAddedToCart(true);
     setTimeout(() => setAddedToCart(false), 2000);
   };
@@ -133,6 +158,18 @@ export default function PhotoDetails() {
             <h3 className="font-semibold mb-2">Category</h3>
             <p className="text-gray-700">{photo.category?.name || "Uncategorized"}</p>
           </div>
+
+          <div className="mb-6 rounded-lg border border-gray-200 p-4">
+            <label htmlFor="license-type" className="mb-2 block font-semibold">Choose a photo license</label>
+            <select id="license-type" value={licenseType} onChange={(event) => setLicenseType(event.target.value)} className="w-full rounded-lg border border-gray-300 p-3">
+              <option value="personal">Personal use — ${Number(photo.price).toFixed(2)}</option>
+              <option value="commercial">Commercial use — ${(Number(photo.price) * 2).toFixed(2)}</option>
+              <option value="extended">Extended use — ${(Number(photo.price) * 5).toFixed(2)}</option>
+            </select>
+            <p className="mt-2 text-xs text-gray-500">Personal 1× · Commercial 2× · Extended 5×. Confirm your actual license terms before selling.</p>
+          </div>
+          {user && <button type="button" onClick={handleFavorite} disabled={favoriteLoading} className="mb-4 rounded-lg border border-emerald-700 px-4 py-2 font-medium text-emerald-800 disabled:opacity-50">{favoriteLoading ? "Saving..." : isFavorite ? "♥ Remove from Favorites" : "♡ Save to Favorites"}</button>}
+          {favoriteError && <p role="alert" className="mb-4 text-sm text-red-700">{favoriteError}</p>}
 
           <div className="mb-8">
             <h3 className="font-semibold mb-2">Details</h3>

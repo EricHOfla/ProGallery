@@ -195,10 +195,10 @@ export const cartAPI = {
     return apiRequest('/cart');
   },
 
-  addItem: async (photoId, quantity = 1) => {
+  addItem: async (photoId, quantity = 1, licenseType = 'personal') => {
     return apiRequest('/cart/add', {
       method: 'POST',
-      body: JSON.stringify({ photo_id: photoId, quantity }),
+      body: JSON.stringify({ photo_id: photoId, quantity, license_type: licenseType }),
     });
   },
 
@@ -279,6 +279,8 @@ export const ordersAPI = {
     return response.blob();
   },
 
+  createPaymentSession: async (orderId) => apiRequest('/orders/' + orderId + '/payment-session', { method: 'POST' }),
+
   create: async (orderData) => {
     return apiRequest('/orders', {
       method: 'POST',
@@ -333,6 +335,16 @@ export const categoriesAPI = {
       method: 'DELETE',
     });
   },
+};
+
+ // Favorites API
+export const favoritesAPI = {
+  getAll: async () => {
+    const response = await apiRequest('/favorites');
+    return Array.isArray(response) ? response : response?.data || [];
+  },
+  add: async (photoId) => apiRequest('/favorites', { method: 'POST', body: JSON.stringify({ photo_id: photoId }) }),
+  remove: async (photoId) => apiRequest('/favorites/' + photoId, { method: 'DELETE' }),
 };
 
 // Contact API
@@ -447,6 +459,7 @@ export default {
   contactAPI,
   dashboardAPI,
   reviewsAPI,
+  favoritesAPI,
   contactMessagesAPI,
   analyticsAPI,
   usersAPI,

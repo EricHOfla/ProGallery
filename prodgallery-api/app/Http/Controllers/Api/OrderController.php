@@ -9,6 +9,8 @@ use App\Models\OrderItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
@@ -56,7 +58,8 @@ class OrderController extends Controller
             }
 
             // Compute prices from the database, never from browser-submitted totals.
-            $totalAmount = $cartItems->sum(fn ($item) => (float) $item->photo->price * (int) $item->quantity);
+            $licenseMultiplier = fn ($license) => match ($license) { 'commercial' => 2, 'extended' => 5, default => 1 };
+            $totalAmount = $cartItems->sum(fn ($item) => (float) $item->photo->price * $licenseMultiplier($item->license_type ?? 'personal') * (int) $item->quantity);
 
             $createdOrder = Order::create([
                 'user_id' => $request->user()->id,
@@ -73,7 +76,8 @@ class OrderController extends Controller
                     'order_id' => $createdOrder->id,
                     'photo_id' => $item->photo_id,
                     'quantity' => $item->quantity,
-                    'price' => $item->photo->price,
+                    'price' => (float) $item->photo->price * $licenseMultiplier($item->license_type ?? 'personal'),
+                    'license_type' => $item->license_type ?? 'personal',
                 ]);
             }
 
@@ -82,7 +86,68 @@ class OrderController extends Controller
             return $createdOrder->load('items.photo');
         }, 3);
 
+        try {
+            Mail::raw(
+                "We received order {$order->order_number}. Total: {$order->total_amount}. Payment is still pending until your payment provider confirms it.",
+                function ($message) use ($request, $order) {
+                    $message->to($request->user()->email)
+                        ->subject('Order received - ' . $order->order_number);
+                }
+            );
+        } catch (\Throwable $exception) {
+            Log::error('Order notification email failed', [
+                'order_id' => $order->id,
+                'exception' => $exception->getMessage(),
+            ]);
+        }
+
         return response()->json($order, 201);
+    }
+
+    public function createPaymentSession(Request $request, $id)
+    {
+        $order = Order::with('items.photo', 'user')->findOrFail($id);
+        $this->authorize('view', $order);
+
+        if ($order->payment_status === 'paid') {
+            return response()->json(['message' => 'This order has already been paid.'], 409);
+        }
+
+        $secret = (string) config('services.stripe.secret');
+        if ($secret === '') {
+            return response()->json(['message' => 'Online payment is not configured yet. Please contact the store.'], 503);
+        }
+
+        $frontendUrl = rtrim((string) config('app.frontend_url', config('app.url')), '/');
+        $form = [
+            'mode' => 'payment',
+            'success_url' => $frontendUrl . '/order/' . $order->id . '?payment=success',
+            'cancel_url' => $frontendUrl . '/order/' . $order->id . '?payment=cancelled',
+            'customer_email' => $order->user->email,
+            'client_reference_id' => (string) $order->id,
+            'metadata[order_id]' => (string) $order->id,
+            'payment_intent_data[metadata][order_id]' => (string) $order->id,
+        ];
+
+        foreach ($order->items as $index => $item) {
+            $form["line_items[$index][price_data][currency]"] = strtolower((string) config('services.stripe.currency', 'usd'));
+            $form["line_items[$index][price_data][unit_amount]"] = (string) round((float) $item->price * 100);
+            $form["line_items[$index][price_data][product_data][name]"] = ($item->photo?->title ?? 'Photo') . ' (' . ucfirst($item->license_type ?? 'personal') . ' license)';
+            $form["line_items[$index][quantity]"] = (string) $item->quantity;
+        }
+
+        $response = \Illuminate\Support\Facades\Http::withToken($secret)
+            ->asForm()
+            ->post('https://api.stripe.com/v1/checkout/sessions', $form);
+
+        if (!$response->successful() || empty($response->json('url')) || empty($response->json('id'))) {
+            \Illuminate\Support\Facades\Log::error('Stripe Checkout session creation failed', ['order_id' => $order->id, 'status' => $response->status()]);
+            return response()->json(['message' => 'Could not start secure payment. Please try again later.'], 502);
+        }
+
+        $order->update(['payment_provider_session_id' => $response->json('id')]);
+
+        return response()->json(['url' => $response->json('url'), 'session_id' => $response->json('id')]);
     }
 
     public function invoice(Request $request, $id)
@@ -92,8 +157,8 @@ class OrderController extends Controller
         // Authorize that the user can download the invoice
         $this->authorize('downloadInvoice', $order);
 
-        if ($order->status !== 'completed') {
-            return response()->json(['message' => 'Invoice is available after completion.'], 403);
+        if ($order->status !== 'completed' || $order->payment_status !== 'paid') {
+            return response()->json(['message' => 'Invoice is available after confirmed payment.'], 403);
         }
 
         $shipping = $order->shipping_address ?? [];
@@ -246,8 +311,8 @@ class OrderController extends Controller
         $this->authorize('downloadImages', $order);
 
         // Only allow download if order is completed
-        if ($order->status !== 'completed') {
-            return response()->json(['message' => 'Images are only available for completed orders'], 403);
+        if ($order->status !== 'completed' || $order->payment_status !== 'paid') {
+            return response()->json(['message' => 'Images are only available after confirmed payment'], 403);
         }
 
         $items = $order->items;

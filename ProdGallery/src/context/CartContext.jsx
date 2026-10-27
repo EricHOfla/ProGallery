@@ -45,25 +45,25 @@ export function CartProvider({ children }) {
     }
   };
 
-  const addToCart = async (photo, quantity = 1) => {
+  const addToCart = async (photo, quantity = 1, licenseType = 'personal') => {
     try {
       if (isAuthenticated()) {
         // Add to API
-        const response = await cartAPI.addItem(photo.id, quantity);
+        const response = await cartAPI.addItem(photo.id, quantity, licenseType);
         // Reload cart to ensure consistency
         await loadCartFromAPI();
       } else {
         // Add to local cart
         setCart((prevCart) => {
-          const existingItem = prevCart.find((item) => item.id === photo.id);
+          const existingItem = prevCart.find((item) => item.id === photo.id && (item.license_type || 'personal') === licenseType);
           if (existingItem) {
             return prevCart.map((item) =>
-              item.id === photo.id
+              item.id === photo.id && (item.license_type || 'personal') === licenseType
                 ? { ...item, quantity: item.quantity + quantity }
                 : item
             );
           }
-          return [...prevCart, { ...photo, quantity }];
+          return [...prevCart, { ...photo, quantity, license_type: licenseType, price: Number(photo.price) * ({ personal: 1, commercial: 2, extended: 5 }[licenseType] || 1) }];
         });
       }
       setError(null);
