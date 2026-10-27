@@ -14,9 +14,6 @@ export default function Checkout() {
   const { isAuthenticated } = useAuth();
 
   const [paymentMethod, setPaymentMethod] = useState("card");
-  const [couponCode, setCouponCode] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState(null);
-  const [couponError, setCouponError] = useState("");
   
   const [formData, setFormData] = useState({
     firstName: "",
@@ -31,48 +28,14 @@ export default function Checkout() {
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderId, setOrderId] = useState("");
   const [orderTotal, setOrderTotal] = useState(0);
+  const [orderItemCount, setOrderItemCount] = useState(0);
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Coupon codes
-  const validCoupons = {
-    SAVE10: { discount: 0.1, type: "percentage" },
-    SAVE20: { discount: 0.2, type: "percentage" },
-    FIRST50: { discount: 50, type: "fixed" },
-    WELCOME15: { discount: 0.15, type: "percentage" },
-  };
-
-  const applyCoupon = () => {
-    const coupon = validCoupons[couponCode.toUpperCase()];
-    if (coupon) {
-      setAppliedCoupon({ code: couponCode.toUpperCase(), ...coupon });
-      setCouponError("");
-    } else {
-      setCouponError("Invalid coupon code");
-      setAppliedCoupon(null);
-    }
-  };
-
-  const removeCoupon = () => {
-    setAppliedCoupon(null);
-    setCouponCode("");
-    setCouponError("");
-  };
-
-  const calculateDiscount = () => {
-    if (!appliedCoupon) return 0;
-    
-    const subtotal = getTotalPrice();
-    if (appliedCoupon.type === "percentage") {
-      return subtotal * appliedCoupon.discount;
-    }
-    return Math.min(appliedCoupon.discount, subtotal);
-  };
-
   const getSubtotal = () => getTotalPrice();
-  const getTax = () => getSubtotal() * 0.1;
-  const getDiscount = () => calculateDiscount();
-  const getTotal = () => getSubtotal() + getTax() - getDiscount();
+  const getTax = () => 0;
+  const getDiscount = () => 0;
+  const getTotal = () => getSubtotal();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -112,11 +75,11 @@ export default function Checkout() {
           zipCode: formData.zipCode,
         },
         paymentMethod,
-        couponCode: appliedCoupon?.code || null,
       };
       const newOrder = await createOrder(orderData);
       setOrderId(newOrder.orderNumber || newOrder.id);
       setOrderTotal(Number(newOrder.total ?? newOrder.total_amount ?? getSubtotal()));
+      setOrderItemCount(cart.reduce((sum, item) => sum + Number(item.quantity || 1), 0));
       setOrderPlaced(true);
       clearCart();
     } catch (error) {
@@ -165,7 +128,7 @@ export default function Checkout() {
           </div>
 
           <h2 className="text-3xl font-bold text-gray-900 mb-4">
-            Order Placed Successfully!
+            Order Received — Payment Pending
           </h2>
 
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 mb-8">
@@ -181,7 +144,7 @@ export default function Checkout() {
             <h3 className="text-xl font-bold mb-4">Order Details</h3>
             <div className="text-left bg-gray-50 border border-gray-200 p-6 rounded-lg">
               <p className="mb-2">
-                <strong>Items:</strong> {cart.length}
+                <strong>Items:</strong> {orderItemCount}
               </p>
               <p className="mb-2">
                 <strong>Order Total:</strong> ${orderTotal.toFixed(2)}
@@ -364,8 +327,8 @@ export default function Checkout() {
             </div>
 
             {/* Submit Button */}
-            <Button type="submit" variant="primary" className="w-full">
-              Place Order
+            <Button type="submit" variant="primary" className="w-full" disabled={submitting}>
+              {submitting ? "Placing order..." : "Place Order (Payment Pending)"}
             </Button>
           </form>
         </div>
@@ -389,77 +352,15 @@ export default function Checkout() {
               ))}
             </div>
 
-            {/* Coupon Code */}
-            <div className="border-t pt-4 mb-4">
-              <h4 className="font-semibold mb-3">Have a coupon?</h4>
-              {!appliedCoupon ? (
-                <div>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Enter coupon code"
-                      value={couponCode}
-                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-emerald-600 text-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={applyCoupon}
-                      className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition text-sm font-medium"
-                    >
-                      Apply
-                    </button>
-                  </div>
-                  {couponError && (
-                    <p className="text-red-600 text-xs mt-2">{couponError}</p>
-                  )}
-                  <p className="text-xs text-gray-500 mt-2">
-                    Try: SAVE10, SAVE20, WELCOME15
-                  </p>
-                </div>
-              ) : (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-semibold text-green-800 text-sm">
-                        {appliedCoupon.code}
-                      </p>
-                      <p className="text-xs text-green-600">
-                        {appliedCoupon.type === "percentage"
-                          ? `${(appliedCoupon.discount * 100).toFixed(0)}% off`
-                          : `$${appliedCoupon.discount} off`}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={removeCoupon}
-                      className="text-red-600 hover:text-red-700 text-sm font-medium"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
             <div className="border-t pt-4 space-y-3">
               <div className="flex justify-between">
                 <span className="text-gray-700">Subtotal</span>
                 <span className="font-semibold">${getSubtotal().toFixed(2)}</span>
               </div>
+}
               <div className="flex justify-between">
-                <span className="text-gray-700">Tax (10%)</span>
-                <span className="font-semibold">${getTax().toFixed(2)}</span>
-              </div>
-              {appliedCoupon && (
-                <div className="flex justify-between text-green-600">
-                  <span>Discount ({appliedCoupon.code})</span>
-                  <span className="font-semibold">-${getDiscount().toFixed(2)}</span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span className="text-gray-700">Delivery</span>
-                <span className="font-semibold">Free</span>
+                <span className="text-gray-700">Tax and delivery</span>
+                <span className="font-semibold">Not configured</span>
               </div>
             </div>
 
