@@ -51,7 +51,8 @@ class OrderRefundTest extends TestCase
         Http::assertSent(function ($request) use ($order) {
             return $request->url() === 'https://api.stripe.com/v1/refunds'
                 && $request['payment_intent'] === 'pi_refund_test'
-                && $request['metadata[order_id]'] === (string) $order->id;
+                && (($request['metadata']['order_id'] ?? null) === (string) $order->id
+                    || ($request['metadata[order_id]'] ?? null) === (string) $order->id);
         });
     }
 
