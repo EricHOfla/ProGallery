@@ -206,7 +206,7 @@ export default function AdminOrderDetails() {
                   {order.stripe_refund_id && <p className="mt-1 break-all text-xs text-gray-500">Stripe refund: {order.stripe_refund_id}</p>}
                 </div>
                 <button type="button" onClick={handleRefund} disabled={actionLoading || order.payment_status !== "paid" || !order.payment_intent_id || Boolean(order.stripe_refund_id)} className="inline-flex min-h-11 items-center justify-center rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50">
-                  {actionLoading ? "Submitting refund…" : order.payment_status === "refunded" ? "Refunded" : "Issue full refund"}
+                  {actionLoading ? "Submitting refund…" : order.payment_status === "refunded" ? "Refunded" : order.payment_status === "refund_pending" ? "Refund pending" : "Issue full refund"}
                 </button>
               </div>
               <p className="mt-3 text-xs leading-5 text-gray-500">Refunds are sent to Stripe and are available only for confirmed payments with a payment intent. Confirm the refund status in Stripe if the provider reports a pending result.</p>
