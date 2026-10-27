@@ -15,6 +15,12 @@ return new class extends Migration
             $table->timestamp('paid_at')->nullable();
         });
 
+        // Preserve access for orders already marked completed before payment tracking existed.
+        \Illuminate\Support\Facades\DB::table('orders')->where('status', 'completed')->update([
+            'payment_status' => 'paid',
+            'paid_at' => \Illuminate\Support\Facades\DB::raw('updated_at'),
+        ]);
+
         Schema::table('carts', function (Blueprint $table) {
             $table->string('license_type', 20)->default('personal');
         });
