@@ -7,9 +7,8 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Str;
 use Illuminate\Auth\Events\PasswordReset;
 
 class AuthController extends Controller
@@ -125,29 +124,12 @@ class AuthController extends Controller
             'email' => 'required|email',
         ]);
 
-        $user = User::where('email', $request->email)->first();
+        // Laravel sends a time-limited reset link and stores only a hashed token.
+        // Use the same response whether the account exists to avoid email enumeration.
+        Password::sendResetLink($request->only('email'));
 
-        if (!$user) {
-            return response()->json(['message' => 'If your email exists in our system, you will receive a password reset link.']);
-        }
-
-        // Generate reset token
-        $token = Str::random(64);
-
-        DB::table('password_reset_tokens')->updateOrInsert(
-            ['email' => $request->email],
-            [
-                'token' => Hash::make($token),
-                'created_at' => now(),
-            ]
-        );
-
-        // In production, send email here
-        // For now, return token for testing
         return response()->json([
-            'message' => 'Password reset link sent to your email',
-            'reset_token' => $token, // Remove this in production
-            'email' => $request->email, // Remove this in production
+            'message' => 'If an account exists with this email, password reset instructions will be sent.',
         ]);
     }
 
@@ -155,50 +137,31 @@ class AuthController extends Controller
     {
         $request->validate([
             'email' => 'required|email',
-            'token' => 'required',
-            'password' => 'required|string|min:6|confirmed',
+            'token' => 'required|string',
+            'password' => 'required|string|min:8|confirmed',
         ]);
 
-        $resetRecord = DB::table('password_reset_tokens')
-            ->where('email', $request->email)
-            ->first();
+        $status = Password::reset(
+            $request->only('email', 'token', 'password', 'password_confirmation'),
+            function (User $user, string $password) {
+                $user->forceFill([
+                    'password' => Hash::make($password),
+                    'remember_token' => Str::random(60),
+                ])->save();
 
-        if (!$resetRecord) {
+                // Revoke existing API sessions after a successful password reset.
+                $user->tokens()->delete();
+                event(new PasswordReset($user));
+            }
+        );
+
+        if ($status !== Password::PASSWORD_RESET) {
             throw ValidationException::withMessages([
-                'email' => ['Invalid password reset token.'],
+                'email' => [__($status)],
             ]);
         }
-
-        if (!Hash::check($request->token, $resetRecord->token)) {
-            throw ValidationException::withMessages([
-                'token' => ['Invalid password reset token.'],
-            ]);
-        }
-
-        // Check if token is expired (1 hour)
-        if (now()->diffInMinutes($resetRecord->created_at) > 60) {
-            throw ValidationException::withMessages([
-                'token' => ['Password reset token has expired.'],
-            ]);
-        }
-
-        $user = User::where('email', $request->email)->first();
-
-        if (!$user) {
-            throw ValidationException::withMessages([
-                'email' => ['User not found.'],
-            ]);
-        }
-
-        $user->update([
-            'password' => Hash::make($request->password),
-        ]);
-
-        // Delete reset token
-        DB::table('password_reset_tokens')
-            ->where('email', $request->email)
-            ->delete();
 
         return response()->json(['message' => 'Password reset successfully']);
     }
+
 }
