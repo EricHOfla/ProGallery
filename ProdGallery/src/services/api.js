@@ -473,6 +473,7 @@ export default {
 
 // Admin store configuration
 export const storeSettingsAPI = {
+  getPublic: () => apiRequest('/store-settings'),
   get: () => apiRequest('/admin/settings'),
   update: (settings) => apiRequest('/admin/settings', {
     method: 'PUT',
