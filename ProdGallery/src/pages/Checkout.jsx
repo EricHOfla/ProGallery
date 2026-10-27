@@ -86,7 +86,7 @@ export default function Checkout() {
       setOrderTotal(Number(newOrder.total ?? newOrder.total_amount ?? getSubtotal()));
       setOrderItemCount(cart.reduce((sum, item) => sum + Number(item.quantity || 1), 0));
       setOrderPlaced(true);
-      await clearCart();
+      clearCart().catch(() => {});
 
       if (paymentMethod === "card" && numericOrderId) {
         try {
