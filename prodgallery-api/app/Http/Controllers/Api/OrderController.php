@@ -9,6 +9,8 @@ use App\Models\OrderItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
@@ -83,6 +85,21 @@ class OrderController extends Controller
 
             return $createdOrder->load('items.photo');
         }, 3);
+
+        try {
+            Mail::raw(
+                "We received order {$order->order_number}. Total: {$order->total_amount}. Payment is still pending until your payment provider confirms it.",
+                function ($message) use ($request, $order) {
+                    $message->to($request->user()->email)
+                        ->subject('Order received - ' . $order->order_number);
+                }
+            );
+        } catch (\Throwable $exception) {
+            Log::error('Order notification email failed', [
+                'order_id' => $order->id,
+                'exception' => $exception->getMessage(),
+            ]);
+        }
 
         return response()->json($order, 201);
     }
