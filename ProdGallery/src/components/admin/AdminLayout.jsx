@@ -12,6 +12,9 @@ const navigation = [
     { name: 'Categories', href: '/admin/categories', icon: '▤' },
     { name: 'Orders & Payments', href: '/admin/orders', icon: '▣' },
   ]},
+  { label: 'CONFIGURATION', items: [
+    { name: 'Store Settings', href: '/admin/settings', icon: '⚙' },
+  ]},
   { label: 'CUSTOMERS', items: [
     { name: 'Users', href: '/admin/users', icon: '♙' },
     { name: 'Contact Messages', href: '/admin/messages', icon: '✉' },
@@ -134,7 +137,7 @@ export default function AdminLayout() {
           </div>
           <Outlet />
         </main>
-        <footer className="border-t border-slate-200 px-4 py-4 text-center text-xs text-slate-500 sm:px-6">ProdGallery Admin · Manage your store in one place</footer>
+        <footer className="border-t border-slate-200 px-4 py-4 text-center text-xs text-slate-500 sm:px-6">ProGallery Admin · Manage your store in one place</footer>
       </div>
     </div>
   );
