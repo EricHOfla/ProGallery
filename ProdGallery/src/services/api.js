@@ -295,6 +295,11 @@ export const ordersAPI = {
     });
   },
 
+  refund: async (orderId) => apiRequest(`/admin/orders/${orderId}/refund`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  }),
+
   // Admin endpoints
   getAllOrders: async () => {
     const response = await apiRequest('/admin/orders');
