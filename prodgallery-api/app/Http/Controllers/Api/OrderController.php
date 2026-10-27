@@ -61,7 +61,10 @@ class OrderController extends Controller
 
             // Compute prices from the database, never from browser-submitted totals.
             $licenseMultiplier = fn ($license) => (float) ($settings[$license . '_license_multiplier'] ?? match ($license) { 'commercial' => 2, 'extended' => 5, default => 1 });
-            $totalAmount = $cartItems->sum(fn ($item) => (float) $item->photo->price * $licenseMultiplier($item->license_type ?? 'personal') * (int) $item->quantity);
+            // Round each unit price to the currency's two-decimal precision before
+            // summing, so the order total matches the line items charged by Stripe.
+            $unitPriceFor = fn ($item) => round((float) $item->photo->price * $licenseMultiplier($item->license_type ?? 'personal'), 2);
+            $totalAmount = round($cartItems->sum(fn ($item) => $unitPriceFor($item) * (int) $item->quantity), 2);
 
             $createdOrder = Order::create([
                 'user_id' => $request->user()->id,
@@ -78,7 +81,7 @@ class OrderController extends Controller
                     'order_id' => $createdOrder->id,
                     'photo_id' => $item->photo_id,
                     'quantity' => $item->quantity,
-                    'price' => (float) $item->photo->price * $licenseMultiplier($item->license_type ?? 'personal'),
+                    'price' => $unitPriceFor($item),
                     'license_type' => $item->license_type ?? 'personal',
                 ]);
             }
