@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Container from "../components/common/Container";
 import Button from "../components/common/Button";
@@ -6,7 +6,7 @@ import SectionTitle from "../components/common/SectionTitle";
 import { useCart } from "../context/CartContext";
 import { useOrders } from "../context/OrderContext";
 import { useAuth } from "../context/AuthContext";
-import { ordersAPI } from "../services/api";
+import { ordersAPI, storeSettingsAPI } from "../services/api";
 
 export default function Checkout() {
   const navigate = useNavigate();
@@ -15,6 +15,15 @@ export default function Checkout() {
   const { isAuthenticated } = useAuth();
 
   const [paymentMethod, setPaymentMethod] = useState("card");
+  const [storePolicies, setStorePolicies] = useState({ refund_policy: "", delivery_policy: "" });
+
+  useEffect(() => {
+    let active = true;
+    storeSettingsAPI.getPublic()
+      .then((settings) => { if (active) setStorePolicies({ refund_policy: settings.refund_policy || "", delivery_policy: settings.delivery_policy || "" }); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
   
   const [formData, setFormData] = useState({
     firstName: "",
@@ -384,6 +393,10 @@ export default function Checkout() {
               </div>
             </div>
 
+            {(storePolicies.delivery_policy || storePolicies.refund_policy) && <div className="mt-5 space-y-3 border-t border-gray-200 pt-4">
+              {storePolicies.delivery_policy && <div><h4 className="text-xs font-bold uppercase tracking-wide text-gray-500">Digital delivery</h4><p className="mt-1 text-xs leading-5 text-gray-600">{storePolicies.delivery_policy}</p></div>}
+              {storePolicies.refund_policy && <div><h4 className="text-xs font-bold uppercase tracking-wide text-gray-500">Refund policy</h4><p className="mt-1 text-xs leading-5 text-gray-600">{storePolicies.refund_policy}</p></div>}
+            </div>}
             <div className="border-t mt-4 pt-4">
               <div className="flex justify-between">
                 <span className="font-bold text-lg">Total</span>
