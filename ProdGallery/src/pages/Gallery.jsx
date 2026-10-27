@@ -5,7 +5,9 @@ import SectionTitle from "../components/common/SectionTitle";
 import { photosAPI, categoriesAPI } from "../services/api";
 
 export default function Gallery() {
-  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ current_page: 1, last_page: 1, total: 0 });
   const [photos, setPhotos] = useState([]);
   const [categories, setCategories] = useState(["All"]);
   const [loading, setLoading] = useState(true);
@@ -18,16 +20,22 @@ export default function Gallery() {
   const [showFilters, setShowFilters] = useState(true);
 
   useEffect(() => {
+    setPage(1);
+  }, [searchTerm, minPrice, maxPrice, sortBy, sortOrder, selectedCategory]);
+
+  useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         const [photosResponse, categoriesResponse] = await Promise.all([
-          photosAPI.getAll({
+          photosAPI.getPage({
             search: searchTerm,
             min_price: minPrice,
             max_price: maxPrice,
             sort_by: sortBy,
             sort_order: sortOrder,
+            category: selectedCategory,
+            page,
           }),
           categoriesAPI.getAll(),
         ]);
@@ -37,9 +45,17 @@ export default function Gallery() {
           : photosResponse?.data || [];
 
         setPhotos(photosList);
+        setPagination({
+          current_page: Number(photosResponse?.current_page || page),
+          last_page: Number(photosResponse?.last_page || 1),
+          total: Number(photosResponse?.total ?? photosList.length),
+        });
         setCategories([
-          "All",
-          ...(categoriesResponse || []).map((category) => category.name),
+          { name: "All", slug: "" },
+          ...(Array.isArray(categoriesResponse) ? categoriesResponse : categoriesResponse?.data || []).map((category) => ({
+            name: category.name,
+            slug: category.slug,
+          })),
         ]);
         setError(null);
       } catch (err) {
@@ -50,16 +66,9 @@ export default function Gallery() {
     };
 
     fetchData();
-  }, [searchTerm, minPrice, maxPrice, sortBy, sortOrder]);
+  }, [searchTerm, minPrice, maxPrice, sortBy, sortOrder, selectedCategory, page]);
 
-  // Filter photos based on selected category
-  const filteredPhotos = useMemo(
-    () =>
-      selectedCategory === "All"
-        ? photos
-        : photos.filter((p) => p.category?.name === selectedCategory),
-    [selectedCategory, photos]
-  );
+  const filteredPhotos = useMemo(() => photos, [photos]);
 
   const skeletonCards = Array.from({ length: 9 }, (_, index) => (
     <div
@@ -96,7 +105,7 @@ export default function Gallery() {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">Search & Filters</h3>
-                  <p className="text-sm text-gray-600">{filteredPhotos.length} photos found</p>
+                  <p className="text-sm text-gray-600">{pagination.total} photos found</p>
                 </div>
               </div>
               <button
@@ -241,6 +250,8 @@ export default function Gallery() {
                     setMaxPrice("");
                     setSortBy("created_at");
                     setSortOrder("desc");
+                    setSelectedCategory("");
+                    setPage(1);
                   }}
                   className="flex items-center gap-2 px-6 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium transition-all hover:shadow-md"
                 >
@@ -266,15 +277,18 @@ export default function Gallery() {
         <div className="flex flex-wrap gap-2 md:gap-3 px-2">
           {categories.map((category) => (
             <button
-              key={category}
-              onClick={() => setSelectedCategory(category)}
+              key={category.slug || "all"}
+              onClick={() => {
+                setSelectedCategory(category.slug);
+                setPage(1);
+              }}
               className={`px-4 md:px-6 py-2.5 rounded-full font-medium transition-all text-sm md:text-base shadow-sm hover:shadow-md ${
-                selectedCategory === category
+                selectedCategory === category.slug
                   ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-emerald-200"
                   : "bg-white border border-gray-300 text-gray-700 hover:border-emerald-500 hover:text-emerald-600"
               }`}
             >
-              {category}
+              {category.name}
             </button>
           ))}
         </div>
@@ -301,6 +315,30 @@ export default function Gallery() {
             No photos found in this category.
           </p>
         </div>
+      )}
+
+      {!loading && !error && pagination.last_page > 1 && (
+        <nav className="mt-8 flex flex-wrap items-center justify-center gap-3" aria-label="Photo pages">
+          <button
+            type="button"
+            disabled={page <= 1}
+            onClick={() => setPage((current) => Math.max(1, current - 1))}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Previous
+          </button>
+          <span className="text-sm text-gray-600" aria-live="polite">
+            Page {pagination.current_page} of {pagination.last_page} · {pagination.total} photos
+          </span>
+          <button
+            type="button"
+            disabled={page >= pagination.last_page}
+            onClick={() => setPage((current) => Math.min(pagination.last_page, current + 1))}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Next
+          </button>
+        </nav>
       )}
     </Container>
   );

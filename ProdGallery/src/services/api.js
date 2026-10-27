@@ -1,12 +1,17 @@
 // API Configuration and Base Setup
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
+const API_BASE_URL = configuredApiUrl || (import.meta.env.DEV ? 'http://localhost:8000/api' : '');
+
+const assertApiConfigured = () => {
+  if (!API_BASE_URL) throw new Error('API is not configured. Set VITE_API_URL to your deployed Laravel API URL.');
+};
 
 // Helper function to get auth token
 const getAuthToken = () => {
   const user = localStorage.getItem('prodgallery_user');
   if (user) {
-    const userData = JSON.parse(user);
-    return userData.token;
+    try { const userData = JSON.parse(user); return userData?.token || null; }
+    catch { localStorage.removeItem('prodgallery_user'); }
   }
   return null;
 };
@@ -22,6 +27,7 @@ const handleResponse = async (response) => {
 
 // Generic API request function
 const apiRequest = async (endpoint, options = {}) => {
+  assertApiConfigured();
   const token = getAuthToken();
   
   const headers = {
@@ -112,6 +118,16 @@ export const photosAPI = {
     return Array.isArray(response) ? response : response?.data || [];
   },
 
+  getPage: async (params = {}) => {
+    const queryParams = new URLSearchParams();
+    ['search', 'min_price', 'max_price', 'sort_by', 'sort_order', 'category', 'page', 'per_page'].forEach((key) => {
+      const value = params[key];
+      if (value !== undefined && value !== null && value !== '') queryParams.set(key, String(value));
+    });
+    const queryString = queryParams.toString();
+    return apiRequest(queryString ? `/photos?${queryString}` : '/photos');
+  },
+
   getById: async (id) => {
     return apiRequest(`/photos/${id}`);
   },
@@ -122,6 +138,7 @@ export const photosAPI = {
 
   // Admin endpoints
   create: async (formData) => {
+    assertApiConfigured();
     const token = getAuthToken();
     
     const headers = {
@@ -142,6 +159,7 @@ export const photosAPI = {
   },
 
   update: async (id, formData) => {
+    assertApiConfigured();
     const token = getAuthToken();
     
     const headers = {
@@ -216,6 +234,7 @@ export const ordersAPI = {
   },
 
   getInvoiceHtml: async (orderId) => {
+    assertApiConfigured();
     const token = getAuthToken();
 
     const headers = {
@@ -239,6 +258,7 @@ export const ordersAPI = {
   },
 
   downloadImages: async (orderId) => {
+    assertApiConfigured();
     const token = getAuthToken();
 
     const headers = {};

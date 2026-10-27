@@ -13,8 +13,13 @@ class AnalyticsController extends Controller
     public function revenue()
     {
         try {
+            $driver = DB::connection()->getDriverName();
+            $monthExpression = $driver === 'sqlite'
+                ? "strftime('%Y-%m', created_at)"
+                : "DATE_FORMAT(created_at, '%Y-%m')";
+
             $revenueByMonth = Order::where('status', 'completed')
-                ->selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, SUM(total_amount) as revenue')
+                ->selectRaw("$monthExpression as month, SUM(total_amount) as revenue")
                 ->groupBy('month')
                 ->orderBy('month', 'desc')
                 ->limit(12)
@@ -22,7 +27,8 @@ class AnalyticsController extends Controller
 
             return response()->json($revenueByMonth);
         } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+            report($e);
+            return response()->json(['message' => 'Analytics data is temporarily unavailable.'], 500);
         }
     }
 

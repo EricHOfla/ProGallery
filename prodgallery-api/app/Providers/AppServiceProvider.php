@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Auth\Notifications\ResetPassword;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Policies\CartPolicy;
@@ -36,6 +37,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Reset links should return customers to the frontend SPA, not the Laravel host.
+        ResetPassword::createUrlUsing(function ($user, string $token): string {
+            $frontendUrl = rtrim((string) config('app.frontend_url', config('app.url')), '/');
+
+            return $frontendUrl . '/reset-password?token=' . urlencode($token)
+                . '&email=' . urlencode($user->getEmailForPasswordReset());
+        });
+
         // Register policies
         foreach ($this->policies as $model => $policy) {
             Gate::policy($model, $policy);

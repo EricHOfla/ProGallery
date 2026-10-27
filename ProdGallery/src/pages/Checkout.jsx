@@ -5,16 +5,15 @@ import Button from "../components/common/Button";
 import SectionTitle from "../components/common/SectionTitle";
 import { useCart } from "../context/CartContext";
 import { useOrders } from "../context/OrderContext";
+import { useAuth } from "../context/AuthContext";
 
 export default function Checkout() {
   const navigate = useNavigate();
   const { cart, getTotalPrice, clearCart } = useCart();
   const { createOrder } = useOrders();
+  const { isAuthenticated } = useAuth();
 
   const [paymentMethod, setPaymentMethod] = useState("card");
-  const [couponCode, setCouponCode] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState(null);
-  const [couponError, setCouponError] = useState("");
   
   const [formData, setFormData] = useState({
     firstName: "",
@@ -24,53 +23,19 @@ export default function Checkout() {
     address: "",
     city: "",
     zipCode: "",
-    cardNumber: "",
-    expiryDate: "",
-    cvv: "",
   });
 
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderId, setOrderId] = useState("");
-
-  // Coupon codes
-  const validCoupons = {
-    SAVE10: { discount: 0.1, type: "percentage" },
-    SAVE20: { discount: 0.2, type: "percentage" },
-    FIRST50: { discount: 50, type: "fixed" },
-    WELCOME15: { discount: 0.15, type: "percentage" },
-  };
-
-  const applyCoupon = () => {
-    const coupon = validCoupons[couponCode.toUpperCase()];
-    if (coupon) {
-      setAppliedCoupon({ code: couponCode.toUpperCase(), ...coupon });
-      setCouponError("");
-    } else {
-      setCouponError("Invalid coupon code");
-      setAppliedCoupon(null);
-    }
-  };
-
-  const removeCoupon = () => {
-    setAppliedCoupon(null);
-    setCouponCode("");
-    setCouponError("");
-  };
-
-  const calculateDiscount = () => {
-    if (!appliedCoupon) return 0;
-    
-    const subtotal = getTotalPrice();
-    if (appliedCoupon.type === "percentage") {
-      return subtotal * appliedCoupon.discount;
-    }
-    return Math.min(appliedCoupon.discount, subtotal);
-  };
+  const [orderTotal, setOrderTotal] = useState(0);
+  const [orderItemCount, setOrderItemCount] = useState(0);
+  const [submitError, setSubmitError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const getSubtotal = () => getTotalPrice();
-  const getTax = () => getSubtotal() * 0.1;
-  const getDiscount = () => calculateDiscount();
-  const getTotal = () => getSubtotal() + getTax() - getDiscount();
+  const getTax = () => 0;
+  const getDiscount = () => 0;
+  const getTotal = () => getSubtotal();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -82,46 +47,46 @@ export default function Checkout() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Validate form
-    if (!formData.firstName || !formData.lastName || !formData.email) {
-      alert("Please fill in all required fields");
+    setSubmitError("");
+    if (!isAuthenticated()) {
+      navigate("/login");
       return;
     }
-
-    // Create order object
-    const orderData = {
-      items: cart,
-      subtotal: getSubtotal(),
-      tax: getTax(),
-      discount: getDiscount(),
-      shipping: 0,
-      total: getTotal(),
-      shippingInfo: {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        phone: formData.phone,
-        address: formData.address,
-        city: formData.city,
-        zipCode: formData.zipCode,
-      },
-      paymentMethod: paymentMethod,
-      couponCode: appliedCoupon?.code || null,
-    };
-
-    // Save order to context
-    const newOrder = await createOrder(orderData);
-    setOrderId(newOrder.orderNumber || newOrder.id);
-    setOrderPlaced(true);
-    
-    // Clear cart
-    clearCart();
-
-    // Redirect after 5 seconds
-    setTimeout(() => {
-      navigate("/orders");
-    }, 5000);
+    if (!formData.firstName || !formData.lastName || !formData.email) {
+      setSubmitError("Please complete your name and email before placing the order.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const orderData = {
+        items: cart,
+        subtotal: getSubtotal(),
+        tax: getTax(),
+        discount: getDiscount(),
+        shipping: 0,
+        total: getTotal(),
+        shippingInfo: {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          address: formData.address,
+          city: formData.city,
+          zipCode: formData.zipCode,
+        },
+        paymentMethod,
+      };
+      const newOrder = await createOrder(orderData);
+      setOrderId(newOrder.orderNumber || newOrder.id);
+      setOrderTotal(Number(newOrder.total ?? newOrder.total_amount ?? getSubtotal()));
+      setOrderItemCount(cart.reduce((sum, item) => sum + Number(item.quantity || 1), 0));
+      setOrderPlaced(true);
+      clearCart();
+    } catch (error) {
+      setSubmitError(error?.message || "We could not place your order. Your cart has been kept; please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (cart.length === 0 && !orderPlaced) {
@@ -163,14 +128,15 @@ export default function Checkout() {
           </div>
 
           <h2 className="text-3xl font-bold text-gray-900 mb-4">
-            Order Placed Successfully!
+            Order Received — Payment Pending
           </h2>
 
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 mb-8">
             <p className="text-gray-600 mb-4">Your order ID:</p>
             <p className="text-2xl font-bold text-emerald-600 mb-6">{orderId}</p>
-            <p className="text-gray-600">
-              A confirmation email has been sent to <strong>{formData.email}</strong>
+            <p className="text-gray-700">
+              Your order has been recorded, but payment has <strong>not</strong> been processed.
+              No confirmation email has been sent by this application.
             </p>
           </div>
 
@@ -178,14 +144,14 @@ export default function Checkout() {
             <h3 className="text-xl font-bold mb-4">Order Details</h3>
             <div className="text-left bg-gray-50 border border-gray-200 p-6 rounded-lg">
               <p className="mb-2">
-                <strong>Items:</strong> {cart.length}
+                <strong>Items:</strong> {orderItemCount}
               </p>
               <p className="mb-2">
-                <strong>Total Amount:</strong> ${getTotal().toFixed(2)}
+                <strong>Order Total:</strong> ${orderTotal.toFixed(2)}
               </p>
               <p>
                 <strong>Status:</strong>{" "}
-                <span className="text-green-600">Confirmed</span>
+                <span className="text-amber-700">Pending payment</span>
               </p>
             </div>
           </div>
@@ -215,6 +181,7 @@ export default function Checkout() {
         {/* Checkout Form */}
         <div className="lg:col-span-2 w-full">
           <form onSubmit={handleSubmit} className="space-y-8">
+            {submitError && <div role="alert" className="rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-800">{submitError}</div>}
             {/* Shipping Information */}
             <div className="border border-gray-200 rounded-lg p-6 md:p-8">
               <h3 className="text-xl font-bold mb-6">Shopping Information</h3>
@@ -296,7 +263,10 @@ export default function Checkout() {
 
             {/* Payment Method */}
             <div className="border border-gray-200 rounded-lg p-6 md:p-8">
-              <h3 className="text-xl font-bold mb-6">Payment Method</h3>
+              <h3 className="text-xl font-bold mb-2">Preferred Payment Method</h3>
+              <p className="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                Online payment is not connected yet. Do not enter card details. Orders remain pending until a payment provider or manual payment process is configured.
+              </p>
 
               <div className="space-y-4 mb-8">
                 <label className="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-emerald-600 transition"
@@ -339,42 +309,10 @@ export default function Checkout() {
                 </label>
               </div>
 
-              {/* Card Details */}
-              {paymentMethod === "card" && (
-                <div className="space-y-4">
-                  <input
-                    type="text"
-                    name="cardNumber"
-                    placeholder="Card Number (16 digits)"
-                    value={formData.cardNumber}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-emerald-600"
-                  />
-                  <div className="grid grid-cols-2 gap-4">
-                    <input
-                      type="text"
-                      name="expiryDate"
-                      placeholder="MM/YY"
-                      value={formData.expiryDate}
-                      onChange={handleChange}
-                      className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-emerald-600"
-                    />
-                    <input
-                      type="text"
-                      name="cvv"
-                      placeholder="CVV"
-                      value={formData.cvv}
-                      onChange={handleChange}
-                      className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-emerald-600"
-                    />
-                  </div>
-                </div>
-              )}
-
               {paymentMethod === "mobile" && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <p className="text-sm text-gray-700">
-                    You will receive a prompt on your registered mobile number to complete the payment.
+                    Mobile Money processing is not connected. The order will remain pending until payment is arranged.
                   </p>
                 </div>
               )}
@@ -382,15 +320,15 @@ export default function Checkout() {
               {paymentMethod === "bank" && (
                 <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
                   <p className="text-sm text-gray-700">
-                    Bank details will be provided after placing your order.
+                    Bank transfer is not automated. Payment instructions must be confirmed by the store administrator.
                   </p>
                 </div>
               )}
             </div>
 
             {/* Submit Button */}
-            <Button type="submit" variant="primary" className="w-full">
-              Place Order
+            <Button type="submit" variant="primary" className="w-full" disabled={submitting}>
+              {submitting ? "Placing order..." : "Place Order (Payment Pending)"}
             </Button>
           </form>
         </div>
@@ -414,77 +352,15 @@ export default function Checkout() {
               ))}
             </div>
 
-            {/* Coupon Code */}
-            <div className="border-t pt-4 mb-4">
-              <h4 className="font-semibold mb-3">Have a coupon?</h4>
-              {!appliedCoupon ? (
-                <div>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Enter coupon code"
-                      value={couponCode}
-                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-emerald-600 text-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={applyCoupon}
-                      className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition text-sm font-medium"
-                    >
-                      Apply
-                    </button>
-                  </div>
-                  {couponError && (
-                    <p className="text-red-600 text-xs mt-2">{couponError}</p>
-                  )}
-                  <p className="text-xs text-gray-500 mt-2">
-                    Try: SAVE10, SAVE20, WELCOME15
-                  </p>
-                </div>
-              ) : (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-semibold text-green-800 text-sm">
-                        {appliedCoupon.code}
-                      </p>
-                      <p className="text-xs text-green-600">
-                        {appliedCoupon.type === "percentage"
-                          ? `${(appliedCoupon.discount * 100).toFixed(0)}% off`
-                          : `$${appliedCoupon.discount} off`}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={removeCoupon}
-                      className="text-red-600 hover:text-red-700 text-sm font-medium"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
             <div className="border-t pt-4 space-y-3">
               <div className="flex justify-between">
                 <span className="text-gray-700">Subtotal</span>
                 <span className="font-semibold">${getSubtotal().toFixed(2)}</span>
               </div>
+}
               <div className="flex justify-between">
-                <span className="text-gray-700">Tax (10%)</span>
-                <span className="font-semibold">${getTax().toFixed(2)}</span>
-              </div>
-              {appliedCoupon && (
-                <div className="flex justify-between text-green-600">
-                  <span>Discount ({appliedCoupon.code})</span>
-                  <span className="font-semibold">-${getDiscount().toFixed(2)}</span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span className="text-gray-700">Delivery</span>
-                <span className="font-semibold">Free</span>
+                <span className="text-gray-700">Tax and delivery</span>
+                <span className="font-semibold">Not configured</span>
               </div>
             </div>
 

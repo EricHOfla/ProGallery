@@ -8,32 +8,38 @@ export default function Analytics() {
   const [orderStatus, setOrderStatus] = useState([]);
   const [salesByCategory, setSalesByCategory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadErrors, setLoadErrors] = useState([]);
 
   useEffect(() => {
     fetchAnalytics();
   }, []);
 
   const fetchAnalytics = async () => {
-    try {
-      setLoading(true);
-      const [revenueData, topPhotosData, orderStatusData, categoryData] =
-        await Promise.all([
-          analyticsAPI.getRevenue().catch(err => { console.error('Revenue error:', err); return []; }),
-          analyticsAPI.getTopPhotos().catch(err => { console.error('Top photos error:', err); return []; }),
-          analyticsAPI.getOrderStatus().catch(err => { console.error('Order status error:', err); return []; }),
-          analyticsAPI.getSalesByCategory().catch(err => { console.error('Category error:', err); return []; }),
-        ]);
-
-      setRevenue(Array.isArray(revenueData) ? revenueData : []);
-      setTopPhotos(Array.isArray(topPhotosData) ? topPhotosData : []);
-      setOrderStatus(Array.isArray(orderStatusData) ? orderStatusData : []);
-      setSalesByCategory(Array.isArray(categoryData) ? categoryData : []);
-    } catch (err) {
-      console.error('Analytics error:', err);
-      alert("Failed to load analytics: " + (err.message || "Unknown error"));
-    } finally {
-      setLoading(false);
-    }
+    setLoading(true);
+    setLoadErrors([]);
+    const requests = [
+      ['Revenue', analyticsAPI.getRevenue],
+      ['Top photos', analyticsAPI.getTopPhotos],
+      ['Order status', analyticsAPI.getOrderStatus],
+      ['Sales by category', analyticsAPI.getSalesByCategory],
+    ];
+    const results = await Promise.allSettled(requests.map(([, request]) => request()));
+    const errors = [];
+    const values = results.map((result, index) => {
+      if (result.status === 'fulfilled') {
+        const payload = result.value;
+        return Array.isArray(payload) ? payload : payload?.data || [];
+      }
+      console.error(`Analytics ${requests[index][0]} request failed:`, result.reason);
+      errors.push(`${requests[index][0]} could not be loaded.`);
+      return [];
+    });
+    setRevenue(values[0]);
+    setTopPhotos(values[1]);
+    setOrderStatus(values[2]);
+    setSalesByCategory(values[3]);
+    setLoadErrors(errors);
+    setLoading(false);
   };
 
   const formatCurrency = (amount) => {
@@ -46,7 +52,11 @@ export default function Analytics() {
   if (loading) {
     return (
       <div className="p-6">
-        <h1 className="text-2xl font-bold mb-6">Sales Analytics</h1>
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">Sales Analytics</h1>
+        <button type="button" onClick={fetchAnalytics} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2">Refresh analytics</button>
+      </div>
+      {loadErrors.length > 0 && <div role="alert" className="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"><p className="font-semibold">Some analytics could not be loaded.</p><p>{loadErrors.join(" ")} Please refresh or check the API connection.</p></div>}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {Array.from({ length: 4 }, (_, i) => (
             <div key={i} className="bg-white rounded-lg shadow p-6">

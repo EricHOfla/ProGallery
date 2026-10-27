@@ -8,6 +8,7 @@ use App\Models\Cart;
 use App\Models\OrderItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
@@ -33,46 +34,55 @@ class OrderController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'payment_method' => 'required|string',
+        $validated = $request->validate([
+            'payment_method' => 'required|string|max:50',
             'shipping_address' => 'required|array',
             'billing_address' => 'nullable|array',
         ]);
 
-        $cartItems = Cart::with('photo')
-            ->where('user_id', $request->user()->id)
-            ->get();
+        $order = DB::transaction(function () use ($request, $validated) {
+            // Lock cart rows to prevent concurrent checkout requests from duplicating an order.
+            $cartItems = Cart::with('photo')
+                ->where('user_id', $request->user()->id)
+                ->lockForUpdate()
+                ->get();
 
-        if ($cartItems->isEmpty()) {
-            return response()->json(['message' => 'Cart is empty'], 400);
-        }
+            if ($cartItems->isEmpty()) {
+                abort(response()->json(['message' => 'Cart is empty'], 422));
+            }
 
-        $totalAmount = $cartItems->sum(function($item) {
-            return $item->photo->price * $item->quantity;
-        });
+            if ($cartItems->contains(fn ($item) => !$item->photo || !$item->photo->is_active)) {
+                abort(response()->json(['message' => 'One or more photos are no longer available. Refresh your cart and try again.'], 422));
+            }
 
-        $order = Order::create([
-            'user_id' => $request->user()->id,
-            'order_number' => 'ORD-' . Str::upper(Str::random(10)),
-            'total_amount' => $totalAmount,
-            'status' => 'pending',
-            'payment_method' => $request->payment_method,
-            'shipping_address' => $request->shipping_address,
-            'billing_address' => $request->billing_address,
-        ]);
+            // Compute prices from the database, never from browser-submitted totals.
+            $totalAmount = $cartItems->sum(fn ($item) => (float) $item->photo->price * (int) $item->quantity);
 
-        foreach ($cartItems as $item) {
-            OrderItem::create([
-                'order_id' => $order->id,
-                'photo_id' => $item->photo_id,
-                'quantity' => $item->quantity,
-                'price' => $item->photo->price,
+            $createdOrder = Order::create([
+                'user_id' => $request->user()->id,
+                'order_number' => 'ORD-' . Str::upper(Str::random(10)),
+                'total_amount' => $totalAmount,
+                'status' => 'pending',
+                'payment_method' => $validated['payment_method'],
+                'shipping_address' => $validated['shipping_address'],
+                'billing_address' => $validated['billing_address'] ?? null,
             ]);
-        }
 
-        Cart::where('user_id', $request->user()->id)->delete();
+            foreach ($cartItems as $item) {
+                OrderItem::create([
+                    'order_id' => $createdOrder->id,
+                    'photo_id' => $item->photo_id,
+                    'quantity' => $item->quantity,
+                    'price' => $item->photo->price,
+                ]);
+            }
 
-        return response()->json($order->load('items.photo'), 201);
+            Cart::where('user_id', $request->user()->id)->delete();
+
+            return $createdOrder->load('items.photo');
+        }, 3);
+
+        return response()->json($order, 201);
     }
 
     public function invoice(Request $request, $id)
