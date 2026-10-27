@@ -32,8 +32,8 @@ class OrderController extends Controller
             'status' => 'required|in:pending,processing,completed,cancelled',
         ]);
 
-        if ($validated['status'] === 'completed' && $order->payment_status !== 'paid') {
-            return response()->json(['message' => 'An order cannot be completed before payment is confirmed.'], 422);
+        if (in_array($validated['status'], ['processing', 'completed'], true) && $order->payment_status !== 'paid') {
+            return response()->json(['message' => 'An order cannot be processed or completed before payment is confirmed.'], 422);
         }
 
         if (in_array($order->payment_status, ['refunded', 'refund_pending'], true) && $validated['status'] !== 'cancelled') {
