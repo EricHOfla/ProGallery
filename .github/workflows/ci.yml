@@ -47,7 +47,7 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist
       - name: Prepare application key
-        run: php artisan key:generate
+        run: cp .env.example .env && php artisan key:generate
       - name: Run backend tests
         run: php artisan test
         env:
