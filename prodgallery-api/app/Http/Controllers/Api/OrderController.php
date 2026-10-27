@@ -140,8 +140,8 @@ class OrderController extends Controller
         // Authorize that the user can download the invoice
         $this->authorize('downloadInvoice', $order);
 
-        if ($order->status !== 'completed') {
-            return response()->json(['message' => 'Invoice is available after completion.'], 403);
+        if ($order->status !== 'completed' || $order->payment_status !== 'paid') {
+            return response()->json(['message' => 'Invoice is available after confirmed payment.'], 403);
         }
 
         $shipping = $order->shipping_address ?? [];
@@ -294,8 +294,8 @@ class OrderController extends Controller
         $this->authorize('downloadImages', $order);
 
         // Only allow download if order is completed
-        if ($order->status !== 'completed') {
-            return response()->json(['message' => 'Images are only available for completed orders'], 403);
+        if ($order->status !== 'completed' || $order->payment_status !== 'paid') {
+            return response()->json(['message' => 'Images are only available after confirmed payment'], 403);
         }
 
         $items = $order->items;
