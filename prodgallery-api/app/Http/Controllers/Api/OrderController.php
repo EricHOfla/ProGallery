@@ -87,6 +87,52 @@ class OrderController extends Controller
         return response()->json($order, 201);
     }
 
+    public function createPaymentSession(Request $request, $id)
+    {
+        $order = Order::with('items.photo', 'user')->findOrFail($id);
+        $this->authorize('view', $order);
+
+        if ($order->payment_status === 'paid') {
+            return response()->json(['message' => 'This order has already been paid.'], 409);
+        }
+
+        $secret = (string) config('services.stripe.secret');
+        if ($secret === '') {
+            return response()->json(['message' => 'Online payment is not configured yet. Please contact the store.'], 503);
+        }
+
+        $frontendUrl = rtrim((string) config('app.frontend_url', config('app.url')), '/');
+        $form = [
+            'mode' => 'payment',
+            'success_url' => $frontendUrl . '/order/' . $order->id . '?payment=success',
+            'cancel_url' => $frontendUrl . '/order/' . $order->id . '?payment=cancelled',
+            'customer_email' => $order->user->email,
+            'client_reference_id' => (string) $order->id,
+            'metadata[order_id]' => (string) $order->id,
+            'payment_intent_data[metadata][order_id]' => (string) $order->id,
+        ];
+
+        foreach ($order->items as $index => $item) {
+            $form["line_items[$index][price_data][currency]"] = strtolower((string) config('services.stripe.currency', 'usd'));
+            $form["line_items[$index][price_data][unit_amount]"] = (string) round((float) $item->price * 100);
+            $form["line_items[$index][price_data][product_data][name]"] = ($item->photo?->title ?? 'Photo') . ' (' . ucfirst($item->license_type ?? 'personal') . ' license)';
+            $form["line_items[$index][quantity]"] = (string) $item->quantity;
+        }
+
+        $response = \Illuminate\Support\Facades\Http::withToken($secret)
+            ->asForm()
+            ->post('https://api.stripe.com/v1/checkout/sessions', $form);
+
+        if (!$response->successful() || empty($response->json('url')) || empty($response->json('id'))) {
+            \Illuminate\Support\Facades\Log::error('Stripe Checkout session creation failed', ['order_id' => $order->id, 'status' => $response->status()]);
+            return response()->json(['message' => 'Could not start secure payment. Please try again later.'], 502);
+        }
+
+        $order->update(['payment_provider_session_id' => $response->json('id')]);
+
+        return response()->json(['url' => $response->json('url'), 'session_id' => $response->json('id')]);
+    }
+
     public function invoice(Request $request, $id)
     {
         $order = Order::with('items.photo')->findOrFail($id);
