@@ -464,3 +464,17 @@ export default {
   analyticsAPI,
   usersAPI,
 };
+
+
+// Admin store configuration
+export const storeSettingsAPI = {
+  get: () => apiRequest('/admin/settings'),
+  update: (settings) => apiRequest('/admin/settings', {
+    method: 'PUT',
+    body: JSON.stringify(settings),
+  }),
+  refundOrder: (orderId, reason) => apiRequest(`/admin/orders/${orderId}/refund`, {
+    method: 'POST',
+    body: JSON.stringify(reason ? { reason } : {}),
+  }),
+};
