@@ -8,6 +8,8 @@ use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\ReviewController;
+use App\Http\Controllers\Api\FavoriteController;
+use App\Http\Controllers\Api\StripeWebhookController;
 use App\Http\Controllers\Admin\PhotoController as AdminPhotoController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
@@ -29,6 +31,7 @@ Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/categories/{id}', [CategoryController::class, 'show']);
 
 Route::post('/contact', [ContactController::class, 'store']);
+Route::post('/webhooks/stripe', StripeWebhookController::class);
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -49,6 +52,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/orders/{id}/invoice', [OrderController::class, 'invoice']);
     Route::get('/orders/{id}/download-images', [OrderController::class, 'downloadImages']);
     Route::post('/orders', [OrderController::class, 'store']);
+    Route::post('/orders/{id}/payment-session', [OrderController::class, 'createPaymentSession']);
+
+    // Favorites
+    Route::get('/favorites', [FavoriteController::class, 'index']);
+    Route::post('/favorites', [FavoriteController::class, 'store']);
+    Route::delete('/favorites/{photoId}', [FavoriteController::class, 'destroy']);
 
     // Review routes
     Route::get('/photos/{photoId}/reviews', [ReviewController::class, 'index']);
