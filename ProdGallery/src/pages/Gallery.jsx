@@ -1,345 +1,164 @@
-import { useState, useMemo, useEffect } from "react";
-import PhotoCard from "../components/gallery/PhotoCard";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import Container from "../components/common/Container";
-import SectionTitle from "../components/common/SectionTitle";
+import PhotoCard from "../components/gallery/PhotoCard";
 import { photosAPI, categoriesAPI } from "../services/api";
 
+const fieldClass = "min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10";
+
 export default function Gallery() {
-  const [selectedCategory, setSelectedCategory] = useState("");
-  const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState({ current_page: 1, last_page: 1, total: 0 });
   const [photos, setPhotos] = useState([]);
-  const [categories, setCategories] = useState(["All"]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [sortBy, setSortBy] = useState("created_at");
   const [sortOrder, setSortOrder] = useState("desc");
-  const [showFilters, setShowFilters] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ current_page: 1, last_page: 1, total: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [reload, setReload] = useState(0);
+
+  useEffect(() => { setPage(1); }, [searchTerm, minPrice, maxPrice, sortBy, sortOrder, selectedCategory]);
 
   useEffect(() => {
-    setPage(1);
-  }, [searchTerm, minPrice, maxPrice, sortBy, sortOrder, selectedCategory]);
-
-  useEffect(() => {
+    let active = true;
     const fetchData = async () => {
+      setLoading(true);
+      setError("");
       try {
-        setLoading(true);
-        const [photosResponse, categoriesResponse] = await Promise.all([
-          photosAPI.getPage({
-            search: searchTerm,
-            min_price: minPrice,
-            max_price: maxPrice,
-            sort_by: sortBy,
-            sort_order: sortOrder,
-            category: selectedCategory,
-            page,
-          }),
+        const [photoResponse, categoryResponse] = await Promise.all([
+          photosAPI.getPage({ search: searchTerm, min_price: minPrice, max_price: maxPrice, sort_by: sortBy, sort_order: sortOrder, category: selectedCategory, page }),
           categoriesAPI.getAll(),
         ]);
-
-        const photosList = Array.isArray(photosResponse)
-          ? photosResponse
-          : photosResponse?.data || [];
-
-        setPhotos(photosList);
+        if (!active) return;
+        const items = Array.isArray(photoResponse) ? photoResponse : (photoResponse?.data || []);
+        setPhotos(items);
         setPagination({
-          current_page: Number(photosResponse?.current_page || page),
-          last_page: Number(photosResponse?.last_page || 1),
-          total: Number(photosResponse?.total ?? photosList.length),
+          current_page: Number(photoResponse?.current_page || page),
+          last_page: Math.max(1, Number(photoResponse?.last_page || 1)),
+          total: Number(photoResponse?.total ?? items.length),
         });
-        setCategories([
-          { name: "All", slug: "" },
-          ...(Array.isArray(categoriesResponse) ? categoriesResponse : categoriesResponse?.data || []).map((category) => ({
-            name: category.name,
-            slug: category.slug,
-          })),
-        ]);
-        setError(null);
-      } catch (err) {
-        setError(err.message || "Failed to load photos");
+        const categoryItems = Array.isArray(categoryResponse) ? categoryResponse : (categoryResponse?.data || []);
+        setCategories(categoryItems.map((item) => ({ name: item.name, slug: item.slug })));
+      } catch (requestError) {
+        if (active) setError(requestError.message || "We couldn't load the gallery. Please try again.");
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
-
     fetchData();
-  }, [searchTerm, minPrice, maxPrice, sortBy, sortOrder, selectedCategory, page]);
+    return () => { active = false; };
+  }, [searchTerm, minPrice, maxPrice, sortBy, sortOrder, selectedCategory, page, reload]);
 
-  const filteredPhotos = useMemo(() => photos, [photos]);
-
-  const skeletonCards = Array.from({ length: 9 }, (_, index) => (
-    <div
-      key={`skeleton-${index}`}
-      className="border border-gray-200 rounded-lg overflow-hidden shadow-sm"
-    >
-      <div className="h-64 bg-gradient-to-br from-gray-100 via-gray-200 to-gray-100 animate-pulse" />
-      <div className="p-4 space-y-3">
-        <div className="h-4 w-3/5 bg-gray-200 rounded animate-pulse" />
-        <div className="h-3 w-2/5 bg-gray-200 rounded animate-pulse" />
-        <div className="h-5 w-1/3 bg-gray-200 rounded animate-pulse" />
-      </div>
-    </div>
-  ));
+  const clearFilters = () => {
+    setSearchTerm("");
+    setMinPrice("");
+    setMaxPrice("");
+    setSelectedCategory("");
+    setSortBy("created_at");
+    setSortOrder("desc");
+    setPage(1);
+  };
+  const hasFilters = Boolean(searchTerm || minPrice || maxPrice || selectedCategory);
 
   return (
-    <Container className="py-8 md:py-16">
-      <SectionTitle
-        title="Photo Gallery"
-        subtitle="Browse our collection of professional photography across various categories"
-      />
-
-      {/* Advanced Search and Filters */}
-      <div className="mb-8">
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-          {/* Filter Header */}
-          <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-gray-200 px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Search & Filters</h3>
-                  <p className="text-sm text-gray-600">{pagination.total} photos found</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:text-emerald-600 transition-colors"
-              >
-                {showFilters ? 'Hide Filters' : 'Show Filters'}
-                <svg 
-                  className={`w-5 h-5 transition-transform ${showFilters ? 'rotate-180' : ''}`}
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
+    <div className="min-h-screen bg-[#f8faf9]">
+      <section className="border-b border-slate-200 bg-white">
+        <Container className="py-10 sm:py-14 lg:py-16">
+          <p className="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-emerald-700">The collection</p>
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-2xl">
+              <h1 className="text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl">Find your next favourite frame.</h1>
+              <p className="mt-4 max-w-xl text-base leading-7 text-slate-600">Explore photographs for your personal projects, creative work and the stories you want to tell.</p>
+            </div>
+            <div className="flex flex-wrap gap-3 text-sm text-slate-600">
+              <span className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2">Thoughtfully curated</span>
+              <span className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2">Flexible usage licenses</span>
             </div>
           </div>
+        </Container>
+      </section>
 
-          {/* Filter Content */}
-          {showFilters && (
-            <div className="p-6 space-y-6">
-              {/* Search Bar with Icon */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Search Photos
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="Search by title, description, or photographer..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                  />
-                  {searchTerm && (
-                    <button
-                      onClick={() => setSearchTerm("")}
-                      className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Price Range */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                    <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Min Price
-                  </label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 font-medium">
-                      $
-                    </span>
-                    <input
-                      type="number"
-                      placeholder="0.00"
-                      value={minPrice}
-                      onChange={(e) => setMinPrice(e.target.value)}
-                      className="w-full pl-8 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                    <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Max Price
-                  </label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 font-medium">
-                      $
-                    </span>
-                    <input
-                      type="number"
-                      placeholder="999.99"
-                      value={maxPrice}
-                      onChange={(e) => setMaxPrice(e.target.value)}
-                      className="w-full pl-8 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                    />
-                  </div>
-                </div>
-
-                {/* Sort By */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                    <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
-                    </svg>
-                    Sort By
-                  </label>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all bg-white"
-                  >
-                    <option value="created_at">📅 Date Added</option>
-                    <option value="price">💰 Price</option>
-                    <option value="title">🔤 Name</option>
-                  </select>
-                </div>
-
-                {/* Sort Order */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                    <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                    </svg>
-                    Order
-                  </label>
-                  <select
-                    value={sortOrder}
-                    onChange={(e) => setSortOrder(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all bg-white"
-                  >
-                    <option value="asc">⬆️ Ascending</option>
-                    <option value="desc">⬇️ Descending</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Clear Filters Button */}
-              <div className="flex justify-end pt-4 border-t border-gray-200">
-                <button
-                  onClick={() => {
-                    setSearchTerm("");
-                    setMinPrice("");
-                    setMaxPrice("");
-                    setSortBy("created_at");
-                    setSortOrder("desc");
-                    setSelectedCategory("");
-                    setPage(1);
-                  }}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium transition-all hover:shadow-md"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  Reset All Filters
-                </button>
+      <Container className="py-8 sm:py-10">
+        <section aria-label="Search and filter photos" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(180px,1fr)_minmax(150px,.8fr)]">
+            <div>
+              <label htmlFor="gallery-search" className="mb-2 block text-sm font-semibold text-slate-800">Search the collection</label>
+              <div className="relative">
+                <svg aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7" strokeWidth="1.7" /><path d="m16 16 4 4" strokeWidth="1.7" strokeLinecap="round" /></svg>
+                <input id="gallery-search" className={fieldClass + " pl-11"} type="search" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Try portraits, nature, city..." />
               </div>
             </div>
-          )}
-        </div>
-      </div>
+            <div>
+              <label htmlFor="gallery-category" className="mb-2 block text-sm font-semibold text-slate-800">Category</label>
+              <select id="gallery-category" className={fieldClass} value={selectedCategory} onChange={(event) => setSelectedCategory(event.target.value)}>
+                <option value="">All categories</option>
+                {categories.map((category) => <option key={category.slug || category.name} value={category.slug}>{category.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="gallery-sort" className="mb-2 block text-sm font-semibold text-slate-800">Sort photos</label>
+              <select id="gallery-sort" className={fieldClass} value={sortBy + ":" + sortOrder} onChange={(event) => { const [field, order] = event.target.value.split(":"); setSortBy(field); setSortOrder(order); }}>
+                <option value="created_at:desc">Newest first</option>
+                <option value="created_at:asc">Oldest first</option>
+                <option value="price:asc">Price: low to high</option>
+                <option value="price:desc">Price: high to low</option>
+                <option value="title:asc">Name: A–Z</option>
+                <option value="title:desc">Name: Z–A</option>
+              </select>
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-1 gap-4 border-t border-slate-100 pt-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+            <div>
+              <label htmlFor="gallery-min-price" className="mb-2 block text-sm font-semibold text-slate-800">Minimum price ($)</label>
+              <input id="gallery-min-price" className={fieldClass} type="number" min="0" step="0.01" value={minPrice} onChange={(event) => setMinPrice(event.target.value)} placeholder="No minimum" />
+            </div>
+            <div>
+              <label htmlFor="gallery-max-price" className="mb-2 block text-sm font-semibold text-slate-800">Maximum price ($)</label>
+              <input id="gallery-max-price" className={fieldClass} type="number" min="0" step="0.01" value={maxPrice} onChange={(event) => setMaxPrice(event.target.value)} placeholder="No maximum" />
+            </div>
+            <button type="button" onClick={clearFilters} disabled={!hasFilters && sortBy === "created_at" && sortOrder === "desc"} className="min-h-11 rounded-xl px-4 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:text-slate-400">Clear filters</button>
+          </div>
+        </section>
 
-      {/* Category Filter */}
-      <div className="mb-8 md:mb-12">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-          <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-          </svg>
-          Filter by Category
-        </h3>
-        <div className="flex flex-wrap gap-2 md:gap-3 px-2">
-          {categories.map((category) => (
-            <button
-              key={category.slug || "all"}
-              onClick={() => {
-                setSelectedCategory(category.slug);
-                setPage(1);
-              }}
-              className={`px-4 md:px-6 py-2.5 rounded-full font-medium transition-all text-sm md:text-base shadow-sm hover:shadow-md ${
-                selectedCategory === category.slug
-                  ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-emerald-200"
-                  : "bg-white border border-gray-300 text-gray-700 hover:border-emerald-500 hover:text-emerald-600"
-              }`}
-            >
-              {category.name}
-            </button>
-          ))}
+        <div className="flex flex-col gap-2 py-7 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-slate-950">Photography to explore</h2>
+            <p className="mt-1 text-sm text-slate-500">{loading ? "Finding photographs..." : `${pagination.total} ${pagination.total === 1 ? "photo" : "photos"} in the collection`}</p>
+          </div>
+          {hasFilters && <button type="button" onClick={clearFilters} className="self-start text-sm font-semibold text-emerald-800 hover:text-emerald-600 sm:self-auto">Reset your search ↗</button>}
         </div>
-      </div>
 
-      {/* Photo Grid */}
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-          {skeletonCards}
-        </div>
-      ) : error ? (
-        <div className="text-center py-12">
-          <p className="text-red-600 text-lg">{error}</p>
-        </div>
-      ) : filteredPhotos.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-          {filteredPhotos.map((photo) => (
-            <PhotoCard key={photo.id} photo={photo} />
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-12">
-          <p className="text-gray-600 text-lg">
-            No photos found in this category.
-          </p>
-        </div>
-      )}
-
-      {!loading && !error && pagination.last_page > 1 && (
-        <nav className="mt-8 flex flex-wrap items-center justify-center gap-3" aria-label="Photo pages">
-          <button
-            type="button"
-            disabled={page <= 1}
-            onClick={() => setPage((current) => Math.max(1, current - 1))}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Previous
-          </button>
-          <span className="text-sm text-gray-600" aria-live="polite">
-            Page {pagination.current_page} of {pagination.last_page} · {pagination.total} photos
-          </span>
-          <button
-            type="button"
-            disabled={page >= pagination.last_page}
-            onClick={() => setPage((current) => Math.min(pagination.last_page, current + 1))}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Next
-          </button>
-        </nav>
-      )}
-    </Container>
+        {error ? (
+          <div role="alert" className="rounded-2xl border border-rose-200 bg-white px-6 py-12 text-center">
+            <p className="text-lg font-semibold text-slate-900">The gallery is taking a break.</p>
+            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">{error}</p>
+            <button type="button" onClick={() => setReload((value) => value + 1)} className="mt-5 min-h-11 rounded-xl bg-slate-950 px-5 text-sm font-semibold text-white hover:bg-emerald-800">Try again</button>
+          </div>
+        ) : loading ? (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">{Array.from({ length: 6 }, (_, index) => <div key={index} className="overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="aspect-[4/3] animate-pulse bg-slate-200" /><div className="space-y-3 p-4"><div className="h-4 w-2/3 animate-pulse rounded bg-slate-200" /><div className="h-3 w-1/3 animate-pulse rounded bg-slate-100" /></div></div>)}</div>
+        ) : photos.length ? (
+          <>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">{photos.map((photo) => <PhotoCard key={photo.id} photo={photo} />)}</div>
+            {pagination.last_page > 1 && <nav aria-label="Gallery pagination" className="mt-10 flex flex-wrap items-center justify-center gap-3">
+              <button type="button" disabled={page <= 1} onClick={() => { setPage((value) => Math.max(1, value - 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="min-h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:border-emerald-500 disabled:cursor-not-allowed disabled:opacity-40">← Previous</button>
+              <span className="px-3 text-sm text-slate-500">Page <strong className="text-slate-900">{pagination.current_page}</strong> of <strong className="text-slate-900">{pagination.last_page}</strong></span>
+              <button type="button" disabled={page >= pagination.last_page} onClick={() => { setPage((value) => Math.min(pagination.last_page, value + 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="min-h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:border-emerald-500 disabled:cursor-not-allowed disabled:opacity-40">Next →</button>
+            </nav>}
+          </>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
+            <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-emerald-50 text-2xl text-emerald-800">⌕</div>
+            <h3 className="mt-5 text-xl font-semibold text-slate-950">No photos found</h3>
+            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">Try a different keyword or remove a filter to see more of the collection.</p>
+            <button type="button" onClick={clearFilters} className="mt-5 min-h-11 rounded-xl bg-slate-950 px-5 text-sm font-semibold text-white hover:bg-emerald-800">Clear search</button>
+            <p className="mt-4 text-sm text-slate-500">Need help finding something? <Link to="/contact" className="font-semibold text-emerald-800 hover:underline">Contact us</Link>.</p>
+          </div>
+        )}
+      </Container>
+    </div>
   );
 }
