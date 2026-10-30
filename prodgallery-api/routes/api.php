@@ -27,6 +27,13 @@ Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
 
 Route::get('/photos', [PhotoController::class, 'index']);
 Route::get('/photos/{id}', [PhotoController::class, 'show']);
+Route::get('/photographers', [PhotographerController::class, 'index']);
+Route::get('/photographers/{id}', [PhotographerController::class, 'show']);
+Route::get('/collections', [CollectionController::class, 'index']);
+Route::get('/collections/{slug}', [CollectionController::class, 'show']);
+Route::post('/newsletter/subscribe', [NewsletterController::class, 'subscribe']);
+Route::post('/newsletter/unsubscribe', [NewsletterController::class, 'unsubscribe']);
+Route::post('/photo-reports', [PhotoReportController::class, 'store']);
 
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/categories/{id}', [CategoryController::class, 'show']);
@@ -40,6 +47,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/user', [AuthController::class, 'user']);
     Route::post('/auth/change-password', [AuthController::class, 'changePassword']);
+    Route::put('/photographer/profile', [PhotographerController::class, 'updateProfile']);
 
     // Cart routes
     Route::get('/cart', [CartController::class, 'index']);
@@ -70,6 +78,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('admin')->prefix('admin')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index']);
         Route::get('/stats', [DashboardController::class, 'stats']);
+
+        // Marketplace content, photographers and moderation
+        Route::get('/photographers', [MarketplaceController::class, 'photographers']);
+        Route::put('/photographers/{id}', [MarketplaceController::class, 'updatePhotographer']);
+        Route::get('/collections', [MarketplaceController::class, 'collections']);
+        Route::post('/collections', [MarketplaceController::class, 'storeCollection']);
+        Route::put('/collections/{id}', [MarketplaceController::class, 'updateCollection']);
+        Route::delete('/collections/{id}', [MarketplaceController::class, 'deleteCollection']);
+        Route::get('/photo-reports', [MarketplaceController::class, 'reports']);
+        Route::put('/photo-reports/{id}', [MarketplaceController::class, 'updateReport']);
+        Route::get('/newsletter/subscribers', [MarketplaceController::class, 'subscribers']);
 
         // Photos management
         Route::get('/photos', [AdminPhotoController::class, 'index']);
