@@ -21,7 +21,10 @@ class PhotographerController extends Controller
 
         if ($request->boolean('verified')) $query->whereNotNull('photographer_verified_at');
 
-        return response()->json($query->orderByDesc('photographer_verified_at')->orderBy('name')->paginate(20));
+        $query->select(['id', 'name', 'photographer_bio', 'photographer_avatar', 'photographer_website', 'photographer_social_links', 'photographer_verified_at'])
+            ->orderByDesc('photographer_verified_at')->orderBy('name');
+
+        return response()->json($query->paginate(20));
     }
 
     public function show(string $id)
