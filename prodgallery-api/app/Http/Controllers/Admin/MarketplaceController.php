@@ -49,7 +49,12 @@ class MarketplaceController extends Controller
         ]);
         $photoIds = $data['photo_ids'] ?? [];
         unset($data['photo_ids']);
-        $data['slug'] = $data['slug'] ?: Str::slug($data['title']) . '-' . Str::lower(Str::random(5));
+        if (empty($data['slug'])) {
+            $baseSlug = Str::slug($data['title']);
+            $data['slug'] = Collection::where('slug', $baseSlug)->exists()
+                ? $baseSlug . '-' . Str::lower(Str::random(5))
+                : $baseSlug;
+        }
         $collection = Collection::create($data);
         $collection->photos()->sync($photoIds);
         return response()->json($collection->load('photos'), 201);
