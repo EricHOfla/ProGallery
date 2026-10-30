@@ -5,7 +5,7 @@ import Button from "../components/common/Button";
 import Reviews from "../components/gallery/Reviews";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
-import { photosAPI, favoritesAPI } from "../services/api";
+import { photosAPI, favoritesAPI, storeSettingsAPI } from "../services/api";
 import { resolveImageUrl } from "../utils/image";
 import { recordRecentlyViewed } from "../utils/recentlyViewed";
 
@@ -16,6 +16,7 @@ export default function PhotoDetails() {
   const { user } = useAuth();
   const [addedToCart, setAddedToCart] = useState(false);
   const [licenseType, setLicenseType] = useState("personal");
+  const [storeSettings, setStoreSettings] = useState({ personal_license_multiplier: "1", commercial_license_multiplier: "2", extended_license_multiplier: "5", personal_license_terms: "", commercial_license_terms: "", extended_license_terms: "" });
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
   const [favoriteError, setFavoriteError] = useState("");
@@ -53,6 +54,12 @@ export default function PhotoDetails() {
   useEffect(() => {
     if (photo) recordRecentlyViewed(photo);
   }, [photo]);
+
+  useEffect(() => {
+    let active = true;
+    storeSettingsAPI.getPublic().then((data) => { if (active) setStoreSettings((current) => ({ ...current, ...data })); }).catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -182,11 +189,11 @@ export default function PhotoDetails() {
           <div className="mb-6 rounded-lg border border-gray-200 p-4">
             <label htmlFor="license-type" className="mb-2 block font-semibold">Choose a photo license</label>
             <select id="license-type" value={licenseType} onChange={(event) => setLicenseType(event.target.value)} className="w-full rounded-lg border border-gray-300 p-3">
-              <option value="personal">Personal use — ${Number(photo.price).toFixed(2)}</option>
-              <option value="commercial">Commercial use — ${(Number(photo.price) * 2).toFixed(2)}</option>
-              <option value="extended">Extended use — ${(Number(photo.price) * 5).toFixed(2)}</option>
+              <option value="personal">Personal use — ${(Number(photo.price) * Number(storeSettings.personal_license_multiplier || 1)).toFixed(2)}</option>
+              <option value="commercial">Commercial use — ${(Number(photo.price) * Number(storeSettings.commercial_license_multiplier || 2)).toFixed(2)}</option>
+              <option value="extended">Extended use — ${(Number(photo.price) * Number(storeSettings.extended_license_multiplier || 5)).toFixed(2)}</option>
             </select>
-            <p className="mt-2 text-xs text-gray-500">Personal 1× · Commercial 2× · Extended 5×. Confirm your actual license terms before selling.</p>
+            <p className="mt-2 text-xs text-gray-500">{storeSettings[licenseType + "_license_terms"] || "License terms will be confirmed at checkout."}</p>
           </div>
           <div className="mb-4 flex flex-wrap gap-2"><button type="button" onClick={handleShare} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-emerald-600 hover:text-emerald-800">Share photo</button>{user && <button type="button" onClick={handleFavorite} disabled={favoriteLoading} className="mb-4 rounded-lg border border-emerald-700 px-4 py-2 font-medium text-emerald-800 disabled:opacity-50">{favoriteLoading ? "Saving..." : isFavorite ? "♥ Remove from Favorites" : "♡ Save to Favorites"}</button>}</div>
           {favoriteError && <p role="alert" className="mb-4 text-sm text-red-700">{favoriteError}</p>}
