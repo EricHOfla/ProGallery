@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { marketplaceAdminAPI } from "../../services/api";
+import { marketplaceAdminAPI, photosAPI } from "../../services/api";
 
 const tabs = ["Collections", "Photographers", "Photo reports", "Newsletter"];
 const panelClass = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
@@ -15,6 +15,8 @@ export default function MarketplaceManagement() {
   const [photographers, setPhotographers] = useState([]);
   const [reports, setReports] = useState([]);
   const [subscribers, setSubscribers] = useState([]);
+  const [availablePhotos, setAvailablePhotos] = useState([]);
+  const [selectedPhotoIds, setSelectedPhotoIds] = useState([]);
   const [form, setForm] = useState({ title: "", description: "", status: "draft", is_featured: false });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -24,13 +26,14 @@ export default function MarketplaceManagement() {
   const load = useCallback(async () => {
     setLoading(true); setError("");
     try {
-      const [c, p, r, n] = await Promise.all([
+      const [c, p, r, n, photoList] = await Promise.all([
         marketplaceAdminAPI.getCollections(),
         marketplaceAdminAPI.getPhotographers(),
         marketplaceAdminAPI.getPhotoReports(),
         marketplaceAdminAPI.getNewsletterSubscribers(),
+        photosAPI.getAll(),
       ]);
-      setCollections(records(c)); setPhotographers(records(p)); setReports(records(r)); setSubscribers(records(n));
+      setCollections(records(c)); setPhotographers(records(p)); setReports(records(r)); setSubscribers(records(n)); setAvailablePhotos(records(photoList));
     } catch (err) { setError(err?.message || "Marketplace management data could not be loaded."); }
     finally { setLoading(false); }
   }, []);
@@ -40,8 +43,8 @@ export default function MarketplaceManagement() {
   const saveCollection = async (event) => {
     event.preventDefault(); setSaving(true); setError(""); setNotice("");
     try {
-      await marketplaceAdminAPI.createCollection(form);
-      setForm({ title: "", description: "", status: "draft", is_featured: false });
+      await marketplaceAdminAPI.createCollection({ ...form, photo_ids: selectedPhotoIds });
+      setForm({ title: "", description: "", status: "draft", is_featured: false }); setSelectedPhotoIds([]);
       setNotice("Collection created."); await load();
     } catch (err) { setError(err?.message || "Collection could not be saved."); }
     finally { setSaving(false); }
@@ -90,10 +93,10 @@ export default function MarketplaceManagement() {
           <label className="block text-sm font-semibold">Title<input required maxLength={160} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="mt-2 min-h-11 w-full rounded-xl border border-slate-200 px-3 text-sm" /></label>
           <label className="block text-sm font-semibold">Description<textarea rows={4} maxLength={5000} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="mt-2 w-full rounded-xl border border-slate-200 p-3 text-sm" /></label>
           <label className="block text-sm font-semibold">Visibility<select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="mt-2 min-h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"><option value="draft">Draft</option><option value="published">Published</option></select></label>
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.is_featured} onChange={(e) => setForm({ ...form, is_featured: e.target.checked })} /> Feature this collection</label>
+          <div><p className="text-sm font-semibold">Include photographs</p><div className="mt-2 max-h-40 space-y-2 overflow-y-auto rounded-xl border border-slate-200 p-3">{availablePhotos.map((photo) => <label key={photo.id} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={selectedPhotoIds.includes(photo.id)} onChange={(e) => setSelectedPhotoIds((current) => e.target.checked ? [...current, photo.id] : current.filter((id) => id !== photo.id))} />{photo.title}</label>)}{!availablePhotos.length && <p className="text-xs text-slate-500">No photos available yet.</p>}</div></div><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.is_featured} onChange={(e) => setForm({ ...form, is_featured: e.target.checked })} /> Feature this collection</label>
           <button disabled={saving} className={buttonClass + " w-full bg-emerald-600 text-white hover:bg-emerald-700"}>{saving ? "Saving…" : "Create collection"}</button>
         </form>
-        <section className={panelClass}><h3 className="font-bold text-slate-950">Existing collections</h3><div className="mt-4 divide-y divide-slate-100">{collections.length ? collections.map((item) => <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-4"><div className="min-w-0"><p className="font-semibold text-slate-900">{item.title}</p><p className="mt-1 text-xs text-slate-500">{item.photos_count || 0} photos · {item.status} {item.is_featured ? "· Featured" : ""}</p></div><button type="button" onClick={() => deleteCollection(item)} className={buttonClass + " border border-rose-200 text-rose-700 hover:bg-rose-50"}>Delete</button></div>) : <p className="py-6 text-sm text-slate-500">No collections have been created.</p>}</div></section>
+        <section className={panelClass}><h3 className="font-bold text-slate-950">Existing collections</h3><div className="mt-4 divide-y divide-slate-100">{collections.length ? collections.map((item) => <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-4"><div className="min-w-0"><p className="font-semibold text-slate-900">{item.title}</p><p className="mt-1 text-xs text-slate-500">{item.photos_count || 0} photos · {item.status} {item.is_featured ? "· Featured" : ""}</p></div><div className="flex gap-2"><button type="button" onClick={async () => { try { await marketplaceAdminAPI.updateCollection(item.id, { status: item.status === "published" ? "draft" : "published" }); setNotice("Collection visibility updated."); await load(); } catch (err) { setError(err.message || "Collection could not be updated."); } }} className={buttonClass + " border border-slate-200 text-slate-700"}>{item.status === "published" ? "Unpublish" : "Publish"}</button><button type="button" onClick={() => deleteCollection(item)} className={buttonClass + " border border-rose-200 text-rose-700 hover:bg-rose-50"}>Delete</button></div></div>) : <p className="py-6 text-sm text-slate-500">No collections have been created.</p>}</div></section>
       </div>}
 
       {activeTab === "Photographers" && <section className={panelClass}><h3 className="font-bold text-slate-950">Photographer accounts</h3><div className="mt-4 divide-y divide-slate-100">{photographers.length ? photographers.map((person) => <div key={person.id} className="flex flex-col justify-between gap-3 py-4 sm:flex-row sm:items-center"><div><p className="font-semibold text-slate-900">{person.name}</p><p className="mt-1 text-xs text-slate-500">{person.email} · {person.photos_count || 0} photos</p><p className="mt-1 text-xs text-slate-500">{person.photographer_verified_at ? "Verified photographer" : "Not verified"}{person.is_suspended ? " · Suspended" : ""}</p></div><div className="flex flex-wrap gap-2"><button type="button" onClick={() => updatePhotographer(person, { verified: !person.photographer_verified_at })} className={buttonClass + " border border-slate-200 text-slate-700"}>{person.photographer_verified_at ? "Remove verification" : "Verify"}</button><button type="button" onClick={() => updatePhotographer(person, { suspended: !person.is_suspended })} className={buttonClass + " border border-rose-200 text-rose-700"}>{person.is_suspended ? "Unsuspend" : "Suspend"}</button></div></div>) : <p className="py-6 text-sm text-slate-500">No photographer accounts yet. Admins can assign the photographer role from User Management.</p>}</div></section>}
