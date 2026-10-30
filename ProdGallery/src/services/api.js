@@ -519,3 +519,16 @@ export const marketplaceAdminAPI = {
   updatePhotoReport: (id, data) => apiRequest('/admin/photo-reports/' + id, { method: 'PUT', body: JSON.stringify(data) }),
   getNewsletterSubscribers: () => apiRequest('/admin/newsletter/subscribers'),
 };
+
+
+export const photographerWorkspaceAPI = {
+  getDashboard: () => apiRequest('/photographer/dashboard'),
+  getPhotos: () => apiRequest('/photographer/photos'),
+  uploadPhoto: async (formData) => {
+    assertApiConfigured();
+    const token = getAuthToken();
+    const response = await fetch(API_BASE_URL + '/photographer/photos', { method: 'POST', headers: { Accept: 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) }, body: formData });
+    return handleResponse(response);
+  },
+  deletePhoto: (id) => apiRequest('/photographer/photos/' + id, { method: 'DELETE' }),
+};
