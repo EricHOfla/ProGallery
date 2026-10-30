@@ -484,3 +484,51 @@ export const storeSettingsAPI = {
     body: JSON.stringify(reason ? { reason } : {}),
   }),
 };
+
+
+// Marketplace discovery and creator features
+export const photographersAPI = {
+  getAll: (params = {}) => apiRequest('/photographers?' + new URLSearchParams(params).toString()),
+  getById: (id) => apiRequest('/photographers/' + id),
+  updateProfile: (data) => apiRequest('/photographer/profile', { method: 'PUT', body: JSON.stringify(data) }),
+};
+
+export const collectionsAPI = {
+  getAll: () => apiRequest('/collections'),
+  getBySlug: (slug) => apiRequest('/collections/' + encodeURIComponent(slug)),
+};
+
+export const newsletterAPI = {
+  subscribe: (email) => apiRequest('/newsletter/subscribe', { method: 'POST', body: JSON.stringify({ email }) }),
+  unsubscribe: (token) => apiRequest('/newsletter/unsubscribe', { method: 'POST', body: JSON.stringify({ token }) }),
+};
+
+export const photoReportsAPI = {
+  submit: (data) => apiRequest('/photo-reports', { method: 'POST', body: JSON.stringify(data) }),
+};
+
+
+export const marketplaceAdminAPI = {
+  getPhotographers: () => apiRequest('/admin/photographers'),
+  updatePhotographer: (id, data) => apiRequest('/admin/photographers/' + id, { method: 'PUT', body: JSON.stringify(data) }),
+  getCollections: () => apiRequest('/admin/collections'),
+  createCollection: (data) => apiRequest('/admin/collections', { method: 'POST', body: JSON.stringify(data) }),
+  updateCollection: (id, data) => apiRequest('/admin/collections/' + id, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteCollection: (id) => apiRequest('/admin/collections/' + id, { method: 'DELETE' }),
+  getPhotoReports: () => apiRequest('/admin/photo-reports'),
+  updatePhotoReport: (id, data) => apiRequest('/admin/photo-reports/' + id, { method: 'PUT', body: JSON.stringify(data) }),
+  getNewsletterSubscribers: () => apiRequest('/admin/newsletter/subscribers'),
+};
+
+
+export const photographerWorkspaceAPI = {
+  getDashboard: () => apiRequest('/photographer/dashboard'),
+  getPhotos: () => apiRequest('/photographer/photos'),
+  uploadPhoto: async (formData) => {
+    assertApiConfigured();
+    const token = getAuthToken();
+    const response = await fetch(API_BASE_URL + '/photographer/photos', { method: 'POST', headers: { Accept: 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) }, body: formData });
+    return handleResponse(response);
+  },
+  deletePhoto: (id) => apiRequest('/photographer/photos/' + id, { method: 'DELETE' }),
+};

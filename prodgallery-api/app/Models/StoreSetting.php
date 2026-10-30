@@ -20,6 +20,10 @@ class StoreSetting extends Model
             'extended_license_multiplier' => '5',
             'refund_policy' => 'Contact support to request a refund. Refund eligibility is reviewed according to the store policy and applicable law.',
             'delivery_policy' => 'Digital downloads become available after payment has been confirmed by the payment provider.',
+            'personal_license_terms' => 'For personal, non-commercial use only. Do not resell, redistribute or sublicense the standalone image.',
+            'commercial_license_terms' => 'For commercial use in business and marketing materials. Do not resell or redistribute the standalone image.',
+            'extended_license_terms' => 'For broader commercial use within the agreed license scope. Do not resell or sublicense the standalone image.',
+            'license_terms_version' => '1.0',
         ];
     }
 

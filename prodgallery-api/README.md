@@ -57,3 +57,29 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+
+## Marketplace backend configuration
+
+The React storefront and Laravel API are maintained in this repository. Deploy the `prodgallery-api` directory as the API service and configure the frontend's `VITE_API_URL` to its `/api` endpoint.
+
+### Required production environment
+
+- Set `APP_ENV=production`, `APP_DEBUG=false`, a unique `APP_KEY`, and the correct `APP_URL`.
+- Set `FRONTEND_URL` to the public React storefront URL.
+- Configure a production database, run `php artisan migrate --force`, and run `php artisan storage:link` for public preview images.
+- Configure mail delivery using the hosting provider's SMTP credentials: `MAIL_MAILER=smtp`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_ENCRYPTION`, `MAIL_FROM_ADDRESS`, and `MAIL_FROM_NAME`.
+- Configure Stripe only on the server with `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `STRIPE_CURRENCY`. Register the webhook endpoint `/api/webhooks/stripe` for checkout completion and refund events.
+- Set `QUEUE_CONNECTION=database` or a managed queue, run a queue worker, and configure scheduled jobs if later enabled.
+- Never commit production secrets or put payment secrets in frontend variables.
+
+### Marketplace additions
+
+- Photographer directory, profile editing, portfolio submissions and creator sales summary.
+- Admin verification/suspension controls and photo moderation.
+- Public collections with admin publishing controls.
+- Newsletter subscriptions with email confirmation and unsubscribe links.
+- Visitor copyright/content reports and admin resolution.
+- Photo metadata, moderation state and real view/download counters.
+
+Photographer gross sales are currently calculated from paid order items. A payout provider, commission rules, tax handling and actual photographer payout ledger still need to be selected and implemented before promising withdrawals or net earnings.

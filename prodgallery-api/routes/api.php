@@ -10,6 +10,11 @@ use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\StripeWebhookController;
+use App\Http\Controllers\Api\PhotographerController;
+use App\Http\Controllers\Api\CollectionController;
+use App\Http\Controllers\Api\NewsletterController;
+use App\Http\Controllers\Api\PhotoReportController;
+use App\Http\Controllers\Admin\MarketplaceController;
 use App\Http\Controllers\Admin\PhotoController as AdminPhotoController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
@@ -27,6 +32,13 @@ Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
 
 Route::get('/photos', [PhotoController::class, 'index']);
 Route::get('/photos/{id}', [PhotoController::class, 'show']);
+Route::get('/photographers', [PhotographerController::class, 'index']);
+Route::get('/photographers/{id}', [PhotographerController::class, 'show']);
+Route::get('/collections', [CollectionController::class, 'index']);
+Route::get('/collections/{slug}', [CollectionController::class, 'show']);
+Route::post('/newsletter/subscribe', [NewsletterController::class, 'subscribe']);
+Route::post('/newsletter/unsubscribe', [NewsletterController::class, 'unsubscribe']);
+Route::post('/photo-reports', [PhotoReportController::class, 'store'])->middleware('throttle:5,1');
 
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/categories/{id}', [CategoryController::class, 'show']);
@@ -40,6 +52,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/user', [AuthController::class, 'user']);
     Route::post('/auth/change-password', [AuthController::class, 'changePassword']);
+    Route::put('/photographer/profile', [PhotographerController::class, 'updateProfile']);
+    Route::get('/photographer/dashboard', [PhotographerController::class, 'dashboard']);
+    Route::get('/photographer/photos', [PhotographerController::class, 'myPhotos']);
+    Route::post('/photographer/photos', [PhotographerController::class, 'storePhoto']);
+    Route::put('/photographer/photos/{id}', [PhotographerController::class, 'updatePhoto']);
+    Route::delete('/photographer/photos/{id}', [PhotographerController::class, 'deletePhoto']);
 
     // Cart routes
     Route::get('/cart', [CartController::class, 'index']);
@@ -70,6 +88,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('admin')->prefix('admin')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index']);
         Route::get('/stats', [DashboardController::class, 'stats']);
+
+        // Marketplace content, photographers and moderation
+        Route::get('/photographers', [MarketplaceController::class, 'photographers']);
+        Route::put('/photographers/{id}', [MarketplaceController::class, 'updatePhotographer']);
+        Route::get('/collections', [MarketplaceController::class, 'collections']);
+        Route::post('/collections', [MarketplaceController::class, 'storeCollection']);
+        Route::put('/collections/{id}', [MarketplaceController::class, 'updateCollection']);
+        Route::delete('/collections/{id}', [MarketplaceController::class, 'deleteCollection']);
+        Route::get('/photo-reports', [MarketplaceController::class, 'reports']);
+        Route::put('/photo-reports/{id}', [MarketplaceController::class, 'updateReport']);
+        Route::get('/newsletter/subscribers', [MarketplaceController::class, 'subscribers']);
 
         // Photos management
         Route::get('/photos', [AdminPhotoController::class, 'index']);

@@ -10,6 +10,10 @@ const defaults = {
   extended_license_multiplier: "5",
   refund_policy: "Contact support to request a refund. Refund eligibility is reviewed according to the store policy and applicable law.",
   delivery_policy: "Digital downloads become available after payment has been confirmed by the payment provider.",
+  personal_license_terms: "For personal, non-commercial use only. Do not resell, redistribute or sublicense the standalone image.",
+  commercial_license_terms: "For commercial use in business and marketing materials. Do not resell or redistribute the standalone image.",
+  extended_license_terms: "For broader commercial use within the agreed license scope. Do not resell or sublicense the standalone image.",
+  license_terms_version: "1.0",
 };
 
 const inputClass = "mt-2 min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100";
@@ -96,6 +100,16 @@ export default function StoreSettings() {
         </div>
       </section>
 
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+        <h3 className="text-lg font-bold text-slate-950">License terms shown to customers</h3>
+        <p className="mt-1 text-sm text-slate-500">These terms are copied into each new order item so later policy edits do not change previous purchases.</p>
+        <div className="mt-5 space-y-5">
+          <label className={labelClass}>Personal license terms<textarea name="personal_license_terms" value={settings.personal_license_terms} onChange={change} required maxLength={5000} rows={3} className={inputClass} /></label>
+          <label className={labelClass}>Commercial license terms<textarea name="commercial_license_terms" value={settings.commercial_license_terms} onChange={change} required maxLength={5000} rows={3} className={inputClass} /></label>
+          <label className={labelClass}>Extended license terms<textarea name="extended_license_terms" value={settings.extended_license_terms} onChange={change} required maxLength={5000} rows={3} className={inputClass} /></label>
+          <label className={labelClass}>License terms version<input name="license_terms_version" value={settings.license_terms_version} onChange={change} required maxLength={40} className={inputClass} /></label>
+        </div>
+      </section>
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs leading-5 text-slate-500">Payment secret keys and email credentials must be configured securely in hosting environment variables, not stored here.</p>
         <button type="submit" disabled={loading || saving} className="inline-flex min-h-12 items-center justify-center rounded-xl bg-emerald-600 px-6 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60">{saving ? "Saving…" : "Save settings"}</button>

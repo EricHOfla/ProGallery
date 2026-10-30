@@ -83,6 +83,8 @@ class OrderController extends Controller
                     'quantity' => $item->quantity,
                     'price' => $unitPriceFor($item),
                     'license_type' => $item->license_type ?? 'personal',
+                    'license_terms' => $settings[($item->license_type ?? 'personal') . '_license_terms'] ?? '',
+                    'license_version' => $settings['license_terms_version'] ?? '1.0',
                 ]);
             }
 
@@ -383,6 +385,7 @@ class OrderController extends Controller
                         $ext = pathinfo($actualPath, PATHINFO_EXTENSION);
                         $fileName = preg_replace('/[^a-zA-Z0-9._-]/', '_', $item->photo->title) . '_' . $item->id . '.' . $ext;
                         $zip->addFile($actualPath, $fileName);
+                        $item->photo->increment('downloads_count');
                         $fileCount++;
                     }
                 }

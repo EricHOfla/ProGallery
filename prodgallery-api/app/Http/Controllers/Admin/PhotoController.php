@@ -23,7 +23,12 @@ class PhotoController extends Controller
             'category_id' => 'required|exists:categories,id',
             'price' => 'required|numeric',
             'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120',
-            'photographer' => 'nullable|string',
+            'photographer' => 'nullable|string|max:255',
+            'photographer_id' => 'nullable|exists:users,id',
+            'tags' => 'nullable|array',
+            'tags.*' => 'string|max:60',
+            'copyright_confirmed' => 'sometimes|boolean',
+            'moderation_status' => 'sometimes|in:pending,approved,rejected,removed',
             'width' => 'nullable|integer',
             'height' => 'nullable|integer',
             'featured' => 'boolean',
@@ -33,8 +38,9 @@ class PhotoController extends Controller
         // Handle file upload
         $imagePath = $this->storeImage($request->file('image'));
 
-        $photoData = $request->all();
+        $photoData = $request->except(['image']);
         $photoData['image'] = $imagePath;
+        $photoData['published_at'] = ($photoData['is_active'] ?? true) && ($photoData['moderation_status'] ?? 'approved') === 'approved' ? now() : null;
 
         $photo = Photo::create($photoData);
         return response()->json($photo, 201);
@@ -48,29 +54,56 @@ class PhotoController extends Controller
             'title' => 'string',
             'category_id' => 'exists:categories,id',
             'price' => 'numeric',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
+            'photographer' => 'nullable|string|max:255',
+            'photographer_id' => 'nullable|exists:users,id',
+            'tags' => 'nullable|array',
+            'tags.*' => 'string|max:60',
+            'copyright_confirmed' => 'sometimes|boolean',
+            'moderation_status' => 'sometimes|in:pending,approved,rejected,removed',
+            'is_active' => 'sometimes|boolean',
+            'featured' => 'sometimes|boolean',
+            'width' => 'nullable|integer|min:1',
+            'height' => 'nullable|integer|min:1',
         ]);
 
-        $updateData = $request->all();
+        $updateData = $request->except(['image']);
 
         // Handle file upload if a new image is provided
         if ($request->hasFile('image')) {
             // Delete old image if exists
-            if ($photo->image && Storage::disk('public')->exists($photo->image)) {
-                Storage::disk('public')->delete($photo->image);
-            }
+            $this->deleteStoredImage($photo->image);
             $updateData['image'] = $this->storeImage($request->file('image'));
         } else {
             // Remove image field if not provided
             unset($updateData['image']);
         }
 
+        if (array_key_exists('is_active', $updateData) || array_key_exists('moderation_status', $updateData)) {
+            $willBeActive = $updateData['is_active'] ?? $photo->is_active;
+            $willBeApproved = ($updateData['moderation_status'] ?? $photo->moderation_status) === 'approved';
+            $updateData['published_at'] = $willBeActive && $willBeApproved ? ($photo->published_at ?? now()) : null;
+        }
         $photo->update($updateData);
         return response()->json($photo);
     }
 
+    private function deleteStoredImage(?string $image): void
+    {
+        if (!$image) return;
+        $path = parse_url($image, PHP_URL_PATH) ?: $image;
+        if (preg_match('#(?:^|/)storage/(.+)$#', $path, $matches)) {
+            $relative = $matches[1];
+        } else {
+            $relative = ltrim($path, '/');
+        }
+        if (Storage::disk('public')->exists($relative)) {
+            Storage::disk('public')->delete($relative);
+        }
+    }
+
     /**
-     * Store uploaded image and return path
+     * Store uploaded image and return public preview URL.
      */
     private function storeImage($file)
     {
@@ -83,9 +116,7 @@ class PhotoController extends Controller
         $photo = Photo::findOrFail($id);
         
         // Delete image file if exists
-        if ($photo->image && Storage::disk('public')->exists($photo->image)) {
-            Storage::disk('public')->delete($photo->image);
-        }
+        $this->deleteStoredImage($photo->image);
         
         $photo->delete();
         return response()->json(['message' => 'Photo deleted successfully']);

@@ -11,6 +11,12 @@ import Orders from "../pages/Orders";
 import OrderDetails from "../pages/OrderDetails";
 import Favorites from "../pages/Favorites";
 import RecentlyViewed from "../pages/RecentlyViewed";
+import Collections from "../pages/Collections";
+import CollectionDetails from "../pages/CollectionDetails";
+import Photographers from "../pages/Photographers";
+import PhotographerDetails from "../pages/PhotographerDetails";
+import NewsletterUnsubscribe from "../pages/NewsletterUnsubscribe";
+import PhotographerWorkspace from "../pages/PhotographerWorkspace";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
 import ChangePassword from "../pages/ChangePassword";
@@ -32,6 +38,7 @@ import AdminContactMessages from "../pages/admin/ContactMessages";
 import AdminAnalytics from "../pages/admin/Analytics";
 import AdminUsers from "../pages/admin/Users";
 import StoreSettings from "../pages/admin/StoreSettings";
+import MarketplaceManagement from "../pages/admin/MarketplaceManagement";
 
 function AppRoutesContent() {
   const location = useLocation();
@@ -44,6 +51,12 @@ function AppRoutesContent() {
         <Route path="/" element={<Home />} />
         <Route path="/gallery" element={<Gallery />} />
         <Route path="/recently-viewed" element={<RecentlyViewed />} />
+        <Route path="/collections" element={<Collections />} />
+        <Route path="/collections/:slug" element={<CollectionDetails />} />
+        <Route path="/photographers" element={<Photographers />} />
+        <Route path="/photographers/:id" element={<PhotographerDetails />} />
+        <Route path="/newsletter/unsubscribe" element={<NewsletterUnsubscribe />} />
+        <Route path="/photographer" element={<ProtectedRoute><PhotographerWorkspace /></ProtectedRoute>} />
         <Route path="/photo/:id" element={<PhotoDetails />} />
         <Route path="/about" element={<About />} />
         <Route path="/services" element={<Services />} />
@@ -70,6 +83,7 @@ function AppRoutesContent() {
           <Route path="messages" element={<AdminContactMessages />} />
           <Route path="analytics" element={<AdminAnalytics />} />
           <Route path="settings" element={<StoreSettings />} />
+          <Route path="marketplace" element={<MarketplaceManagement />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>
