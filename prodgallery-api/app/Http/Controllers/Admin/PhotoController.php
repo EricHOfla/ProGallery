@@ -54,7 +54,15 @@ class PhotoController extends Controller
             'title' => 'string',
             'category_id' => 'exists:categories,id',
             'price' => 'numeric',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
+            'photographer' => 'nullable|string|max:255',
+            'photographer_id' => 'nullable|exists:users,id',
+            'tags' => 'nullable|array',
+            'tags.*' => 'string|max:60',
+            'copyright_confirmed' => 'sometimes|boolean',
+            'moderation_status' => 'sometimes|in:pending,approved,rejected,removed',
+            'is_active' => 'sometimes|boolean',
+            'featured' => 'sometimes|boolean',
         ]);
 
         $updateData = $request->except(['image']);
