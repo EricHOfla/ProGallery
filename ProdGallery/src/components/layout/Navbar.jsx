@@ -20,6 +20,8 @@ export default function Navbar() {
   const links = [
     { to: "/", label: "Home", end: true },
     { to: "/gallery", label: "Gallery" },
+    { to: "/collections", label: "Collections" },
+    { to: "/photographers", label: "Photographers" },
     { to: "/services", label: "Services" },
     { to: "/about", label: "Our story" },
     { to: "/contact", label: "Contact" },
