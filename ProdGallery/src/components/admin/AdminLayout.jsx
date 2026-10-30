@@ -9,6 +9,7 @@ const navigation = [
   ]},
   { label: 'STORE MANAGEMENT', items: [
     { name: 'Photos & Gallery', href: '/admin/photos', icon: '▧' },
+    { name: 'Marketplace', href: '/admin/marketplace', icon: '◇' },
     { name: 'Categories', href: '/admin/categories', icon: '▤' },
     { name: 'Orders & Payments', href: '/admin/orders', icon: '▣' },
   ]},
