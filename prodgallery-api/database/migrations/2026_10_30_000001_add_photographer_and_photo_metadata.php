@@ -17,6 +17,7 @@ return new class extends Migration {
         });
 
         Schema::table('photos', function (Blueprint $table) {
+            $table->foreignId('photographer_id')->nullable()->after('photographer')->constrained('users')->nullOnDelete();
             $table->json('tags')->nullable();
             $table->string('file_format', 20)->nullable();
             $table->unsignedBigInteger('file_size')->nullable();
@@ -31,6 +32,7 @@ return new class extends Migration {
     public function down(): void
     {
         Schema::table('photos', function (Blueprint $table) {
+            $table->dropConstrainedForeignId('photographer_id');
             $table->dropColumn(['tags', 'file_format', 'file_size', 'views_count', 'downloads_count', 'moderation_status', 'copyright_confirmed', 'published_at']);
         });
         Schema::table('users', function (Blueprint $table) {
