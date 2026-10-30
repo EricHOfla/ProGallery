@@ -506,3 +506,16 @@ export const newsletterAPI = {
 export const photoReportsAPI = {
   submit: (data) => apiRequest('/photo-reports', { method: 'POST', body: JSON.stringify(data) }),
 };
+
+
+export const marketplaceAdminAPI = {
+  getPhotographers: () => apiRequest('/admin/photographers'),
+  updatePhotographer: (id, data) => apiRequest('/admin/photographers/' + id, { method: 'PUT', body: JSON.stringify(data) }),
+  getCollections: () => apiRequest('/admin/collections'),
+  createCollection: (data) => apiRequest('/admin/collections', { method: 'POST', body: JSON.stringify(data) }),
+  updateCollection: (id, data) => apiRequest('/admin/collections/' + id, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteCollection: (id) => apiRequest('/admin/collections/' + id, { method: 'DELETE' }),
+  getPhotoReports: () => apiRequest('/admin/photo-reports'),
+  updatePhotoReport: (id, data) => apiRequest('/admin/photo-reports/' + id, { method: 'PUT', body: JSON.stringify(data) }),
+  getNewsletterSubscribers: () => apiRequest('/admin/newsletter/subscribers'),
+};
