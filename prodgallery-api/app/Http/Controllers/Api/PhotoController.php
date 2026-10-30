@@ -41,16 +41,24 @@ class PhotoController extends Controller
             $query->where('price', '<=', $request->max_price);
         }
 
+        // Filter by tags without trusting arbitrary SQL column names.
+        if ($request->filled('tag')) {
+            $tag = trim((string) $request->input('tag'));
+            $query->whereJsonContains('tags', $tag);
+        }
+
         // Sorting
         $sortBy = $request->get('sort_by', 'created_at');
-        $sortOrder = $request->get('sort_order', 'desc');
+        $sortOrder = strtolower((string) $request->get('sort_order', 'desc'));
+        if (!in_array($sortOrder, ['asc', 'desc'], true)) $sortOrder = 'desc';
         $allowedSorts = ['created_at', 'price', 'title'];
         
         if (in_array($sortBy, $allowedSorts)) {
             $query->orderBy($sortBy, $sortOrder);
         }
 
-        $photos = $query->paginate(12);
+        $perPage = min(max((int) $request->get('per_page', 12), 1), 48);
+        $photos = $query->paginate($perPage);
 
         return response()->json($photos);
     }
