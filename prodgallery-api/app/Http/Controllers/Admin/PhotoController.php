@@ -23,7 +23,12 @@ class PhotoController extends Controller
             'category_id' => 'required|exists:categories,id',
             'price' => 'required|numeric',
             'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120',
-            'photographer' => 'nullable|string',
+            'photographer' => 'nullable|string|max:255',
+            'photographer_id' => 'nullable|exists:users,id',
+            'tags' => 'nullable|array',
+            'tags.*' => 'string|max:60',
+            'copyright_confirmed' => 'sometimes|boolean',
+            'moderation_status' => 'sometimes|in:pending,approved,rejected,removed',
             'width' => 'nullable|integer',
             'height' => 'nullable|integer',
             'featured' => 'boolean',
@@ -33,8 +38,9 @@ class PhotoController extends Controller
         // Handle file upload
         $imagePath = $this->storeImage($request->file('image'));
 
-        $photoData = $request->all();
+        $photoData = $request->except(['image']);
         $photoData['image'] = $imagePath;
+        $photoData['published_at'] = ($photoData['is_active'] ?? true) && ($photoData['moderation_status'] ?? 'approved') === 'approved' ? now() : null;
 
         $photo = Photo::create($photoData);
         return response()->json($photo, 201);
@@ -51,7 +57,7 @@ class PhotoController extends Controller
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
         ]);
 
-        $updateData = $request->all();
+        $updateData = $request->except(['image']);
 
         // Handle file upload if a new image is provided
         if ($request->hasFile('image')) {
@@ -65,6 +71,11 @@ class PhotoController extends Controller
             unset($updateData['image']);
         }
 
+        if (array_key_exists('is_active', $updateData) || array_key_exists('moderation_status', $updateData)) {
+            $willBeActive = $updateData['is_active'] ?? $photo->is_active;
+            $willBeApproved = ($updateData['moderation_status'] ?? $photo->moderation_status) === 'approved';
+            $updateData['published_at'] = $willBeActive && $willBeApproved ? ($photo->published_at ?? now()) : null;
+        }
         $photo->update($updateData);
         return response()->json($photo);
     }
