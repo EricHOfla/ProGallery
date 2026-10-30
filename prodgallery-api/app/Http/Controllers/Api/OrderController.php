@@ -383,6 +383,7 @@ class OrderController extends Controller
                         $ext = pathinfo($actualPath, PATHINFO_EXTENSION);
                         $fileName = preg_replace('/[^a-zA-Z0-9._-]/', '_', $item->photo->title) . '_' . $item->id . '.' . $ext;
                         $zip->addFile($actualPath, $fileName);
+                        $item->photo->increment('downloads_count');
                         $fileCount++;
                     }
                 }
