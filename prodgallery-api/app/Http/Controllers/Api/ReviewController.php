@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Review;
-use App\Models\Photo;
 use Illuminate\Http\Request;
 
 class ReviewController extends Controller
@@ -26,6 +25,14 @@ class ReviewController extends Controller
             'rating' => 'required|integer|min:1|max:5',
             'comment' => 'nullable|string|max:1000',
         ]);
+
+        $hasPaidPurchase = \\App\\Models\\OrderItem::where('photo_id', $request->photo_id)
+            ->whereHas('order', fn ($query) => $query->where('user_id', $request->user()->id)->where('payment_status', 'paid'))
+            ->exists();
+
+        if (!$hasPaidPurchase) {
+            return response()->json(['message' => 'Only customers with a confirmed purchase can review this photograph.'], 403);
+        }
 
         $review = Review::updateOrCreate(
             [
