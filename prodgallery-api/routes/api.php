@@ -53,6 +53,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/auth/user', [AuthController::class, 'user']);
     Route::post('/auth/change-password', [AuthController::class, 'changePassword']);
     Route::put('/photographer/profile', [PhotographerController::class, 'updateProfile']);
+    Route::get('/photographer/dashboard', [PhotographerController::class, 'dashboard']);
+    Route::get('/photographer/photos', [PhotographerController::class, 'myPhotos']);
+    Route::post('/photographer/photos', [PhotographerController::class, 'storePhoto']);
+    Route::put('/photographer/photos/{id}', [PhotographerController::class, 'updatePhoto']);
+    Route::delete('/photographer/photos/{id}', [PhotographerController::class, 'deletePhoto']);
 
     // Cart routes
     Route::get('/cart', [CartController::class, 'index']);
