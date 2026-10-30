@@ -83,6 +83,8 @@ class OrderController extends Controller
                     'quantity' => $item->quantity,
                     'price' => $unitPriceFor($item),
                     'license_type' => $item->license_type ?? 'personal',
+                    'license_terms' => $settings[($item->license_type ?? 'personal') . '_license_terms'] ?? '',
+                    'license_version' => $settings['license_terms_version'] ?? '1.0',
                 ]);
             }
 
