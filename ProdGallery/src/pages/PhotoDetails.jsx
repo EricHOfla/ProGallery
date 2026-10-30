@@ -188,7 +188,7 @@ export default function PhotoDetails() {
             </select>
             <p className="mt-2 text-xs text-gray-500">Personal 1× · Commercial 2× · Extended 5×. Confirm your actual license terms before selling.</p>
           </div>
-          <div className="mb-4 flex flex-wrap gap-2"><button type="button" onClick={handleShare} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-emerald-600 hover:text-emerald-800">Share photo</button>{user && <button type="button" onClick={handleFavorite} disabled={favoriteLoading} className="mb-4 rounded-lg border border-emerald-700 px-4 py-2 font-medium text-emerald-800 disabled:opacity-50">{favoriteLoading ? "Saving..." : isFavorite ? "♥ Remove from Favorites" : "♡ Save to Favorites"}</button>}
+          <div className="mb-4 flex flex-wrap gap-2"><button type="button" onClick={handleShare} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-emerald-600 hover:text-emerald-800">Share photo</button>{user && <button type="button" onClick={handleFavorite} disabled={favoriteLoading} className="mb-4 rounded-lg border border-emerald-700 px-4 py-2 font-medium text-emerald-800 disabled:opacity-50">{favoriteLoading ? "Saving..." : isFavorite ? "♥ Remove from Favorites" : "♡ Save to Favorites"}</button>}</div>
           {favoriteError && <p role="alert" className="mb-4 text-sm text-red-700">{favoriteError}</p>}
 
           <div className="mb-8">
