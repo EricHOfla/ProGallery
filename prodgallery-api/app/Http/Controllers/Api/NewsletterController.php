@@ -15,6 +15,7 @@ class NewsletterController extends Controller
     {
         $validated = $request->validate(['email' => 'required|email:rfc|max:255']);
         $subscriber = NewsletterSubscriber::where('email', strtolower($validated['email']))->first();
+        $shouldNotify = !$subscriber || $subscriber->unsubscribed_at !== null;
 
         if (!$subscriber) {
             $subscriber = NewsletterSubscriber::create([
@@ -26,13 +27,13 @@ class NewsletterController extends Controller
             $subscriber->update(['unsubscribed_at' => null, 'subscribed_at' => now()]);
         }
 
-        try {
+        if ($shouldNotify) try {
             $frontendUrl = rtrim((string) config('app.frontend_url', config('app.url')), '/');
             Mail::raw(
                 "Thank you for subscribing to ProGallery updates. You can unsubscribe at: {$frontendUrl}/newsletter/unsubscribe?token={$subscriber->unsubscribe_token}",
                 fn ($message) => $message->to($subscriber->email)->subject('Welcome to ProGallery updates')
             );
-        } catch (\\Throwable $exception) {
+        } catch (\Throwable $exception) {
             Log::warning('Newsletter confirmation email failed', ['subscriber_id' => $subscriber->id, 'exception' => $exception->getMessage()]);
         }
 
