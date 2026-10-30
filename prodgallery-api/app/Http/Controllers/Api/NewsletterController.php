@@ -12,7 +12,7 @@ class NewsletterController extends Controller
     public function subscribe(Request $request)
     {
         $validated = $request->validate(['email' => 'required|email:rfc|max:255']);
-        $subscriber = NewsletterSubscriber::withTrashed()->where('email', strtolower($validated['email']))->first();
+        $subscriber = NewsletterSubscriber::where('email', strtolower($validated['email']))->first();
 
         if (!$subscriber) {
             $subscriber = NewsletterSubscriber::create([
