@@ -38,7 +38,7 @@ Route::get('/collections', [CollectionController::class, 'index']);
 Route::get('/collections/{slug}', [CollectionController::class, 'show']);
 Route::post('/newsletter/subscribe', [NewsletterController::class, 'subscribe']);
 Route::post('/newsletter/unsubscribe', [NewsletterController::class, 'unsubscribe']);
-Route::post('/photo-reports', [PhotoReportController::class, 'store']);
+Route::post('/photo-reports', [PhotoReportController::class, 'store'])->middleware('throttle:5,1');
 
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/categories/{id}', [CategoryController::class, 'show']);
