@@ -65,14 +65,6 @@ class PhotoController extends Controller
             'featured' => 'sometimes|boolean',
             'width' => 'nullable|integer|min:1',
             'height' => 'nullable|integer|min:1',
-            'photographer' => 'nullable|string|max:255',
-            'photographer_id' => 'nullable|exists:users,id',
-            'tags' => 'nullable|array',
-            'tags.*' => 'string|max:60',
-            'copyright_confirmed' => 'sometimes|boolean',
-            'moderation_status' => 'sometimes|in:pending,approved,rejected,removed',
-            'is_active' => 'sometimes|boolean',
-            'featured' => 'sometimes|boolean',
         ]);
 
         $updateData = $request->except(['image']);
