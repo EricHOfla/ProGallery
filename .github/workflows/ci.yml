@@ -30,6 +30,7 @@ jobs:
           VITE_API_URL: http://127.0.0.1:8000/api
 
   backend:
+    if: ${{ hashFiles('prodgallery-api/composer.json') != '' }}
     name: Laravel feature tests
     runs-on: ubuntu-latest
     defaults:
