@@ -10,7 +10,7 @@ class PhotoController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Photo::with('category')->where('is_active', true);
+        $query = Photo::with(['category', 'photographerProfile:id,name,photographer_verified_at'])->where('is_active', true)->where('moderation_status', 'approved');
 
         // Search by title or description
         if ($request->has('search') && $request->search) {
@@ -57,7 +57,9 @@ class PhotoController extends Controller
 
     public function show($id)
     {
-        $photo = Photo::with('category')->where('is_active', true)->findOrFail($id);
-        return response()->json($photo);
+        $photo = Photo::with(['category', 'photographerProfile:id,name,photographer_bio,photographer_avatar,photographer_verified_at'])
+            ->where('is_active', true)->where('moderation_status', 'approved')->findOrFail($id);
+        $photo->increment('views_count');
+        return response()->json($photo->fresh(['category', 'photographerProfile:id,name,photographer_bio,photographer_avatar,photographer_verified_at']));
     }
 }
