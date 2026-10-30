@@ -32,6 +32,7 @@ import AdminContactMessages from "../pages/admin/ContactMessages";
 import AdminAnalytics from "../pages/admin/Analytics";
 import AdminUsers from "../pages/admin/Users";
 import StoreSettings from "../pages/admin/StoreSettings";
+import MarketplaceManagement from "../pages/admin/MarketplaceManagement";
 
 function AppRoutesContent() {
   const location = useLocation();
@@ -70,6 +71,7 @@ function AppRoutesContent() {
           <Route path="messages" element={<AdminContactMessages />} />
           <Route path="analytics" element={<AdminAnalytics />} />
           <Route path="settings" element={<StoreSettings />} />
+          <Route path="marketplace" element={<MarketplaceManagement />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>
