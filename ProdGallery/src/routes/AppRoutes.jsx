@@ -10,6 +10,7 @@ import Checkout from "../pages/Checkout";
 import Orders from "../pages/Orders";
 import OrderDetails from "../pages/OrderDetails";
 import Favorites from "../pages/Favorites";
+import RecentlyViewed from "../pages/RecentlyViewed";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
 import ChangePassword from "../pages/ChangePassword";
@@ -42,6 +43,7 @@ function AppRoutesContent() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/gallery" element={<Gallery />} />
+        <Route path="/recently-viewed" element={<RecentlyViewed />} />
         <Route path="/photo/:id" element={<PhotoDetails />} />
         <Route path="/about" element={<About />} />
         <Route path="/services" element={<Services />} />
