@@ -12,6 +12,7 @@ class PhotographerController extends Controller
     public function index(Request $request)
     {
         $query = User::query()->where('role', 'photographer')->where('is_suspended', false)
+            ->select(['id', 'name', 'photographer_bio', 'photographer_avatar', 'photographer_website', 'photographer_social_links', 'photographer_verified_at'])
             ->withCount(['photos as published_photos_count' => fn ($q) => $q->where('is_active', true)->where('moderation_status', 'approved')]);
 
         if ($request->filled('search')) {
@@ -21,8 +22,7 @@ class PhotographerController extends Controller
 
         if ($request->boolean('verified')) $query->whereNotNull('photographer_verified_at');
 
-        $query->select(['id', 'name', 'photographer_bio', 'photographer_avatar', 'photographer_website', 'photographer_social_links', 'photographer_verified_at'])
-            ->orderByDesc('photographer_verified_at')->orderBy('name');
+        $query->orderByDesc('photographer_verified_at')->orderBy('name');
 
         return response()->json($query->paginate(20));
     }
