@@ -24,6 +24,16 @@ class NewsletterController extends Controller
             $subscriber->update(['unsubscribed_at' => null, 'subscribed_at' => now()]);
         }
 
+        try {
+            $frontendUrl = rtrim((string) config('app.frontend_url', config('app.url')), '/');
+            Mail::raw(
+                "Thank you for subscribing to ProGallery updates. You can unsubscribe at: {$frontendUrl}/newsletter/unsubscribe?token={$subscriber->unsubscribe_token}",
+                fn ($message) => $message->to($subscriber->email)->subject('Welcome to ProGallery updates')
+            );
+        } catch (\\Throwable $exception) {
+            Log::warning('Newsletter confirmation email failed', ['subscriber_id' => $subscriber->id, 'exception' => $exception->getMessage()]);
+        }
+
         return response()->json(['message' => 'You are subscribed to ProGallery updates.'], 201);
     }
 
