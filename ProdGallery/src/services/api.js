@@ -484,3 +484,25 @@ export const storeSettingsAPI = {
     body: JSON.stringify(reason ? { reason } : {}),
   }),
 };
+
+
+// Marketplace discovery and creator features
+export const photographersAPI = {
+  getAll: (params = {}) => apiRequest('/photographers?' + new URLSearchParams(params).toString()),
+  getById: (id) => apiRequest('/photographers/' + id),
+  updateProfile: (data) => apiRequest('/photographer/profile', { method: 'PUT', body: JSON.stringify(data) }),
+};
+
+export const collectionsAPI = {
+  getAll: () => apiRequest('/collections'),
+  getBySlug: (slug) => apiRequest('/collections/' + encodeURIComponent(slug)),
+};
+
+export const newsletterAPI = {
+  subscribe: (email) => apiRequest('/newsletter/subscribe', { method: 'POST', body: JSON.stringify({ email }) }),
+  unsubscribe: (token) => apiRequest('/newsletter/unsubscribe', { method: 'POST', body: JSON.stringify({ token }) }),
+};
+
+export const photoReportsAPI = {
+  submit: (data) => apiRequest('/photo-reports', { method: 'POST', body: JSON.stringify(data) }),
+};
