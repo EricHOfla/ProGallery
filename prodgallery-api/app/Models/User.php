@@ -25,6 +25,12 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'photographer_bio',
+        'photographer_avatar',
+        'photographer_website',
+        'photographer_social_links',
+        'photographer_verified_at',
+        'is_suspended',
     ];
 
     /**
@@ -47,6 +53,9 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'photographer_social_links' => 'array',
+            'photographer_verified_at' => 'datetime',
+            'is_suspended' => 'boolean',
         ];
     }
 
@@ -58,6 +67,16 @@ class User extends Authenticatable
     public function carts()
     {
         return $this->hasMany(Cart::class);
+    }
+
+    public function photos()
+    {
+        return $this->hasMany(Photo::class, 'photographer_id');
+    }
+
+    public function collections()
+    {
+        return $this->hasMany(Collection::class);
     }
 
     public function orders()
