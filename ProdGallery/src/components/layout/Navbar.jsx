@@ -51,7 +51,7 @@ export default function Navbar() {
                 <div className="border-b border-slate-100 px-3 py-2"><p className="truncate text-sm font-bold text-slate-900">{user.firstName} {user.lastName}</p><p className="truncate text-xs text-slate-500">{user.email}</p></div>
                 <Link to="/orders" onClick={closeMenu} className="mt-1 block rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50">My orders</Link>
                 <Link to="/change-password" onClick={closeMenu} className="block rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50">Change password</Link>
-                {user.role === "admin" && <Link to="/admin" onClick={closeMenu} className="block rounded-lg px-3 py-2.5 text-sm font-semibold text-emerald-800 hover:bg-emerald-50">Open admin workspace ↗</Link>}
+                {user.role === "photographer" && <Link to="/photographer" onClick={closeMenu} className="block rounded-lg px-3 py-2.5 text-sm font-semibold text-emerald-800 hover:bg-emerald-50">Photographer workspace</Link>}{user.role === "photographer" && <Link to="/photographer" onClick={closeMenu} className="rounded-lg px-3 py-3 text-sm font-semibold text-emerald-800 hover:bg-emerald-50">Photographer workspace</Link>}{user.role === "admin" && <Link to="/admin" onClick={closeMenu} className="block rounded-lg px-3 py-2.5 text-sm font-semibold text-emerald-800 hover:bg-emerald-50">Open admin workspace ↗</Link>}
                 <button type="button" onClick={handleLogout} className="mt-1 w-full rounded-lg border-t border-slate-100 px-3 py-2.5 text-left text-sm font-semibold text-rose-700 hover:bg-rose-50">Sign out</button>
               </div>}
             </div>
