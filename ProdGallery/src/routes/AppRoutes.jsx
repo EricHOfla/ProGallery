@@ -16,6 +16,7 @@ import CollectionDetails from "../pages/CollectionDetails";
 import Photographers from "../pages/Photographers";
 import PhotographerDetails from "../pages/PhotographerDetails";
 import NewsletterUnsubscribe from "../pages/NewsletterUnsubscribe";
+import PhotographerWorkspace from "../pages/PhotographerWorkspace";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
 import ChangePassword from "../pages/ChangePassword";
@@ -55,6 +56,7 @@ function AppRoutesContent() {
         <Route path="/photographers" element={<Photographers />} />
         <Route path="/photographers/:id" element={<PhotographerDetails />} />
         <Route path="/newsletter/unsubscribe" element={<NewsletterUnsubscribe />} />
+        <Route path="/photographer" element={<ProtectedRoute><PhotographerWorkspace /></ProtectedRoute>} />
         <Route path="/photo/:id" element={<PhotoDetails />} />
         <Route path="/about" element={<About />} />
         <Route path="/services" element={<Services />} />
